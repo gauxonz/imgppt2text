@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会拍总结</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 0; }
+        .container { max-width: 900px; margin: 0 auto; background: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .bottom-bar { flex-shrink: 0; background: white; border-top: 1px solid #eee; }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header h1 { font-size: 20px; }
+        .header-remaining { font-size: 11px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px; }
+        .header-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .header-btn:hover { background: rgba(255,255,255,0.3); }
+        .content { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+
+        /* 设置侧边栏 */
+        .settings-panel { display: none; position: fixed; top: 0; right: -320px; width: 320px; height: 100%; background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.2); z-index: 3000; padding: 20px; overflow-y: auto; transition: right 0.3s ease; }
+        .settings-panel.active { display: block; right: 0; }
+        .settings-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2999; }
+        .settings-overlay.active { display: block; }
+        .settings-panel h3 { margin-bottom: 16px; color: #333; }
+        .setting-row { margin-bottom: 12px; }
+        .setting-row label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+        .setting-row input, .setting-row select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .setting-row input:focus { outline: none; border-color: #667eea; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; }
+        .checkbox-row input { width: auto; }
+        .btn-group { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .btn-group .btn { padding: 8px 12px; font-size: 12px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-success { background: #4caf50; color: white; }
+
+        /* 会议信息 */
+        .meeting-info { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        .meeting-info input { flex: 1 1 calc(50% - 6px); min-width: 150px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+        .meeting-info input:focus { outline: none; border-color: #667eea; }
+
+        /* 演讲人分组 */
+        .speaker-section { background: #f8f9fa; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+        .speaker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .speaker-header h3 { color: #333; font-size: 16px; }
+        .speaker-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+        .speaker-card { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
+        .speaker-card:active { cursor: grabbing; }
+        .speaker-card.dragging { opacity: 0.5; transform: scale(1.05); transition: transform 0.1s; position: relative; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .speaker-card.drag-over { border: 2px dashed #667eea; transform: scale(1.02); transition: all 0.2s; }
+        .speaker-card.drag-over-left { border-left: 4px solid #667eea !important; box-shadow: -4px 0 10px rgba(102, 126, 234, 0.5); }
+        .speaker-card.drag-over-right { border-right: 4px solid #667eea !important; box-shadow: 4px 0 10px rgba(102, 126, 234, 0.5); }
+        .speaker-card.drag-over-top { border-top: 4px solid #667eea !important; box-shadow: 0 -4px 10px rgba(102, 126, 234, 0.5); }
+        .speaker-card.drag-over-bottom { border-bottom: 4px solid #667eea !important; box-shadow: 0 4px 10px rgba(102, 126, 234, 0.5); }
+        .drag-handle { cursor: grab; user-select: none; }
+        .drag-handle:active { cursor: grabbing; }
+        .speaker-card h4 { color: #667eea; margin-bottom: 10px; font-size: 15px; }
+        .speaker-card input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+        .speaker-images { display: flex; flex-wrap: wrap; gap: 8px; min-height: 80px; padding: 4px; border: 1px dashed #ddd; border-radius: 8px; }
+        .speaker-images.drag-over { border-color: #667eea; background: #f0f3ff; }
+        .speaker-img { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; cursor: grab; transition: transform 0.2s, opacity 0.2s; flex-shrink: 0; }
+        .speaker-img:active { cursor: grabbing; }
+        .speaker-img.dragging { opacity: 0.4; transform: scale(1.1); transition: transform 0.1s, opacity 0.1s; position: relative; z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .speaker-img.drag-over { opacity: 0.5; transform: scale(0.95); }
+        .speaker-img.drag-placeholder { opacity: 0.3; border: 2px dashed #667eea; background: #f0f3ff; }
+        .speaker-img.drag-over-left { border-left: 4px solid #667eea !important; box-shadow: -4px 0 10px rgba(102, 126, 234, 0.5); }
+        .speaker-img.drag-over-right { border-right: 4px solid #667eea !important; box-shadow: 4px 0 10px rgba(102, 126, 234, 0.5); }
+        .speaker-images.drag-over { border-color: #667eea; background: #f0f3ff; }
+        .speaker-img img { width: 100%; height: 100%; object-fit: cover; }
+        .speaker-img .remove { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        /* 上传区域 */
+        .upload-section { border: 2px dashed #ddd; border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+        .upload-section:hover { border-color: #667eea; background: #f8f9ff; }
+        .upload-icon { font-size: 36px; margin-bottom: 10px; }
+        .upload-text { color: #666; font-size: 14px; }
+
+        /* 处理按钮 - 固定底部 */
+        .action-buttons { display: flex; gap: 12px; padding: 12px 16px; background: white; border-top: 1px solid #eee; flex-shrink: 0; }
+        .action-buttons .btn-clear { flex: 0 0 auto; padding: 12px 16px; font-size: 13px; }
+        .action-buttons .btn-process { flex: 1; padding: 14px 24px; font-size: 16px; font-weight: 600; }
+
+        /* 进度条 */
+        .progress-section { display: none; padding: 12px 16px; }
+        .progress-section.active { display: block; }
+        .progress-text { text-align: center; margin-bottom: 8px; color: #666; font-size: 14px; }
+        .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(135deg, #667eea, #764ba2); transition: width 0.3s; }
+
+        /* 结果区域 */
+        .result-section { display: none; padding: 16px; }
+        .result-section.active { display: block; }
+        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .result-title { font-size: 18px; font-weight: 600; color: #333; }
+        .result-actions { display: flex; gap: 8px; }
+        .result-content { background: #f8f9fa; border-radius: 8px; padding: 20px; max-height: 500px; overflow-y: auto; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+        .result-content h2 { color: #667eea; margin: 16px 0 8px; font-size: 18px; }
+        .result-content h3 { color: #333; margin: 12px 0 6px; font-size: 16px; }
+
+        /* 弹窗 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 16px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { font-size: 18px; color: #333; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { display: flex; gap: 12px; justify-content: flex-end; }
+
+        /* 添加演讲人弹窗 */
+        .add-speaker-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .add-speaker-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+
+        #fileInput { display: none; }
+
+        /* 图片预览弹窗 */
+        .image-preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+        .image-preview-modal.active { display: flex; }
+        .image-preview-modal img { max-width: 95%; max-height: 95%; object-fit: contain; }
+        .image-preview-modal .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: white; font-size: 40px; cursor: pointer; }
+        .image-preview-modal .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 30px; padding: 15px; cursor: pointer; border-radius: 50%; }
+        .image-preview-modal .nav-btn.prev { left: 20px; }
+        .image-preview-modal .nav-btn.next { right: 20px; }
+        .image-preview-modal .counter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>会拍总结</h1>
+                <span class="header-remaining" id="headerRemaining">免费剩余: ...</span>
+            </div>
+            <button class="header-btn" onclick="toggleSettings()">⚙️ 设置</button>
+        </div>
+
+        <!-- 设置遮罩层 -->
+        <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()"></div>
+
+        <div class="content">
+            <!-- 设置面板（侧边栏） -->
+            <div class="settings-panel" id="settingsPanel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h3 style="margin:0;">⚙️ API 设置</h3>
+                    <button onclick="toggleSettings()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#999;">&times;</button>
+                </div>
+                <div class="setting-row">
+                    <label>API Key</label>
+                    <input type="password" id="apiKeyInput" placeholder="sk-xxx">
+                </div>
+                <div class="setting-row">
+                    <label>Base URL（留空使用默认）</label>
+                    <input type="text" id="baseUrlInput" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1">
+                </div>
+                <div class="setting-row">
+                    <label>模型名称（留空使用默认）</label>
+                    <input type="text" id="modelInput" placeholder="qwen3.5-plus">
+                </div>
+                <div class="setting-row">
+                    <label>并发数量 (1-10)</label>
+                    <input type="number" id="concurrencyInput" min="1" max="10" value="3">
+                </div>
+                <div class="setting-row" style="margin-top: 12px;">
+                    <label>管理员密码（用于开启调试模式）</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="password" id="adminPasswordInput" placeholder="输入管理员密码" style="flex:1;">
+                        <button class="btn btn-secondary" onclick="verifyAdmin()" style="padding:8px 12px;font-size:12px;">验证</button>
+                    </div>
+                </div>
+                <div class="checkbox-row" id="debugModeRow" style="display:none;">
+                    <input type="checkbox" id="debugModeInput">
+                    <label>调试模式（无限量）</label>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+                    <button class="btn btn-success" onclick="validateSettings()">验证设置</button>
+                    <button class="btn btn-secondary" onclick="testApiKey()">测试API Key</button>
+                </div>
+            </div>
+
+            <!-- 会议信息 -->
+            <div class="meeting-info">
+                <input type="text" id="meetingTheme" placeholder="会议主题（必填）">
+                <input type="text" id="meetingDate" placeholder="会议日期（选填）">
+            </div>
+
+            <!-- 演讲人区域 -->
+            <div class="speaker-section">
+                <div class="speaker-header">
+                    <h3>👤 演讲人</h3>
+                </div>
+                <div class="speaker-cards" id="speakerCards">
+                    <p style="color: #999; font-size: 14px;">暂无演讲人，请点击下方按钮添加</p>
+                </div>
+                <!-- 添加演讲人按钮（直接添加，无需填写信息） -->
+                <button class="btn btn-secondary" style="margin-top: 12px; width: 100%;" onclick="addSpeaker()">+ 添加演讲人</button>
+            </div>
+
+            <!-- 图片预览弹窗 -->
+            <div class="image-preview-modal" id="imagePreviewModal" onclick="closeImagePreview(event)">
+                <button class="close-btn" onclick="closeImagePreviewModal()">&times;</button>
+                <button class="nav-btn prev" onclick="previewPrevImage(event)">&#10094;</button>
+                <img id="previewImage" src="" alt="预览">
+                <button class="nav-btn next" onclick="previewNextImage(event)">&#10095;</button>
+                <div class="counter" id="previewCounter">1 / 1</div>
+            </div>
+
+            <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="bottom-bar">
+            <!-- 操作按钮 -->
+            <div class="action-buttons">
+                <button class="btn btn-secondary btn-clear" onclick="clearAll()">清空重置</button>
+                <button class="btn btn-primary btn-process" id="processBtn" onclick="console.log('按钮被点击'); processImages()">开始处理</button>
+            </div>
+
+            <!-- 进度条 -->
+            <div class="progress-section" id="progressSection">
+                <div class="progress-text" id="progressText">处理中...</div>
+                <div class="progress-bar"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+            </div>
+
+            <!-- 结果区域 -->
+            <div class="result-section" id="resultSection">
+                <div class="result-header">
+                    <div class="result-title">📝 识别结果</div>
+                    <div class="result-actions">
+                        <button class="btn btn-secondary" onclick="downloadMarkdown()">下载MD</button>
+                        <button class="btn btn-secondary" onclick="downloadPDF()">下载PDF</button>
+                        <button class="btn btn-secondary" onclick="copyResult()">复制</button>
+                    </div>
+                </div>
+                <div class="result-content" id="resultContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const API_URL = 'https://imgppt2txt-api.8611092.xyz/';
+        const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        const DEFAULT_MODEL = 'qwen3.5-plus';
+        const DEFAULT_DAILY_LIMIT = 100;
+
+        // 状态
+        let speakers = [];
+        let remaining = 0;
+        let isProcessing = false;
+        let settings = {
+            apiKey: '',
+            baseUrl: '',
+            model: '',
+            concurrency: 3,
+            debugMode: false
+        };
+        let resultData = { markdown: '', pdfImages: [] };
+
+        // 初始化
+        window.onload = function() {
+            loadSettings();
+            checkUsage();
+            updateProcessButton();
+            // 预加载EXIF库
+            loadExifJs();
+        };
+
+        // 设置相关
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('active');
+            document.getElementById('settingsOverlay').classList.toggle('active');
+        }
+
+        // 管理员验证
+        async function verifyAdmin() {
+            const password = document.getElementById('adminPasswordInput').value.trim();
+            if (!password) {
+                return;
+            }
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'verify_admin',
+                        adminPassword: password
+                    })
+                });
+                const data = await res.json();
+                if (data.success && data.valid) {
+                    document.getElementById('debugModeRow').style.display = 'flex';
+                    document.getElementById('debugModeInput').checked = true;
+                    alert('验证成功，已开启调试模式');
+                } else {
+                    alert('密码错误');
+                }
+            } catch (e) {
+                alert('验证失败');
+            }
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('ppt_settings');
+            if (saved) {
+                settings = JSON.parse(saved);
+                document.getElementById('apiKeyInput').value = settings.apiKey || '';
+                document.getElementById('baseUrlInput').value = settings.baseUrl || '';
+                document.getElementById('modelInput').value = settings.model || '';
+                document.getElementById('concurrencyInput').value = settings.concurrency || 3;
+                document.getElementById('debugModeInput').checked = settings.debugMode || false;
+            }
+        }
+
+        function saveSettings() {
+            settings.apiKey = document.getElementById('apiKeyInput').value.trim();
+            settings.baseUrl = document.getElementById('baseUrlInput').value.trim();
+            settings.model = document.getElementById('modelInput').value.trim();
+            settings.concurrency = parseInt(document.getElementById('concurrencyInput').value) || 3;
+            settings.debugMode = document.getElementById('debugModeInput').checked;
+
+            localStorage.setItem('ppt_settings', JSON.stringify(settings));
+
+            checkUsage();
+        }
+
+        // 验证设置
+        async function validateSettings() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const baseUrl = document.getElementById('baseUrlInput').value.trim() || DEFAULT_BASE_URL;
+            const model = document.getElementById('modelInput').value.trim() || DEFAULT_MODEL;
+
+            if (!apiKey) {
+                alert('请填写API Key');
+                return;
+            }
+
+            alert('验证通过：\nAPI Key: ' + apiKey.substring(0, 10) + '...\nBase URL: ' + baseUrl + '\nModel: ' + model);
+        }
+
+        // 测试API Key
+        async function testApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                alert('请先填写API Key');
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+
+            try {
+                const baseUrl = document.getElementById('baseUrlInput').value.trim() || DEFAULT_BASE_URL;
+                const response = await fetch(baseUrl + '/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: document.getElementById('modelInput').value.trim() || DEFAULT_MODEL,
+                        messages: [{role: 'user', content: 'Hi'}],
+                        max_tokens: 10
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('✅ API Key 有效！模型：' + (data.model || '未知'));
+                } else {
+                    alert('❌ API Key 无效：' + (data.error?.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('❌ 连接失败：' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '测试API Key';
+            }
+        }
+
+        // 检查剩余次数
+        async function checkUsage() {
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'check_usage',
+                        apiKey: settings.apiKey,
+                        baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
+                        model: settings.model || DEFAULT_MODEL,
+                        debugMode: settings.debugMode
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    remaining = settings.debugMode ? 9999 : data.remaining;
+                    updateRemainingDisplay();
+                }
+            } catch (e) {
+                console.error('检查次数失败:', e);
+            }
+        }
+
+        function updateRemainingDisplay() {
+            const info = settings.debugMode
+                ? '无限次'
+                : `免费: ${remaining}次`;
+            document.getElementById('headerRemaining').textContent = info;
+        }
+
+        // 演讲人管理
+        function showAddSpeakerModal() {
+            document.getElementById('addSpeakerModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('addSpeakerModal').classList.remove('active');
+        }
+
+        function addSpeaker() {
+            // 直接添加一个空的演讲人，姓名和标题可以后续填写或由AI识别
+            speakers.push({
+                name: '',
+                title: '',
+                images: [],
+                autoRecognized: false,
+                collapsed: false,
+                colorIndex: speakers.length  // 固定颜色索引，不随位置变化
+            });
+
+            renderSpeakers();
+            updateProcessButton();
+        }
+
+        function removeSpeaker(index) {
+            speakers.splice(index, 1);
+            renderSpeakers();
+            updateProcessButton();
+        }
+
+        function removeSpeakerImage(speakerIndex, imageIndex) {
+            speakers[speakerIndex].images.splice(imageIndex, 1);
+            renderSpeakers();
+            updateProcessButton();
+        }
+
+        function renderSpeakers() {
+            const container = document.getElementById('speakerCards');
+
+            if (speakers.length === 0) {
+                container.innerHTML = '<p style="color:#999;font-size:14px;">暂无演讲人，请先点击"添加演讲人"</p>';
+                return;
+            }
+
+            // 演讲人背景色（低饱和度彩色）
+            const speakerColors = [
+                'rgba(255, 245, 238, 0.8)',   // 浅杏色
+                'rgba(230, 240, 255, 0.8)',   // 浅蓝灰
+                'rgba(240, 255, 240, 0.8)',   // 浅绿灰
+                'rgba(255, 240, 245, 0.8)',   // 浅粉灰
+                'rgba(245, 245, 255, 0.8)',   // 浅紫灰
+                'rgba(255, 250, 240, 0.8)',   // 浅黄灰
+                'rgba(240, 248, 255, 0.8)',   // 浅青灰
+                'rgba(255, 245, 240, 0.8)',   // 浅橙灰
+            ];
+
+            container.innerHTML = speakers.map((speaker, sIdx) => `
+                <div class="speaker-card" data-speaker-index="${sIdx}" style="background: ${speakerColors[(speaker.colorIndex !== undefined ? speaker.colorIndex : sIdx) % speakerColors.length]};">
+                    <div class="speaker-card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span class="drag-handle" data-speaker-index="${sIdx}" style="cursor:grab;padding:4px 8px;font-size:18px;color:#999;">☰</span>
+                        <input type="text" placeholder="演讲人姓名(可留空，会尝试根据第一张ppt识别)" value="${speaker.name || ''}"
+                            onchange="speakers[${sIdx}].name = this.value"
+                            style="flex:1;font-weight:bold;border:none;background:transparent;color:#667eea;font-size:15px;padding:4px;">
+                        <button class="btn-toggle" onclick="toggleSpeakerCollapse(${sIdx})"
+                            style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;">
+                            ${speaker.collapsed ? '▶' : '▼'}
+                        </button>
+                    </div>
+                    <input type="text" placeholder="演讲标题（可留空，会尝试根据第一张ppt识别）" value="${speaker.title || ''}"
+                        onchange="speakers[${sIdx}].title = this.value">
+                    <div class="speaker-images ${speaker.collapsed ? 'hidden' : ''}" data-speaker-index="${sIdx}" style="${speaker.collapsed ? 'display:none;' : ''}">
+                        ${speaker.images.map((img, iIdx) => `
+                            <div class="speaker-img" draggable="true" data-speaker-index="${sIdx}" data-image-index="${iIdx}">
+                                <img src="${img.src}" data-filename="${img.filename || ''}" alt="PPT" onclick="showImagePreview(${sIdx}, ${iIdx})" ontouchend="handleImageTap(${sIdx}, ${iIdx}, event)" style="cursor:pointer;">
+                                <span class="remove" onclick="removeSpeakerImage(${sIdx},${iIdx})" ontouchend="event.stopPropagation(); removeSpeakerImage(${sIdx},${iIdx})">×</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${speaker.images.length > 1 ? `
+                    <div style="display:flex;gap:8px;margin-top:4px;" ${speaker.collapsed ? 'style="display:none;"' : ''}>
+                        <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:4px 8px;"
+                            onclick="sortImagesByTime(${sIdx})">按时间排序</button>
+                        <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:4px 8px;"
+                            onclick="sortImagesByName(${sIdx})">按文件名排序</button>
+                    </div>
+                    ` : ''}
+                    <div style="display:flex;gap:8px;margin-top:8px;" ${speaker.collapsed ? 'style="display:none;"' : ''}>
+                        <button class="btn btn-primary" style="flex:1;font-size:12px;padding:6px;"
+                            onclick="uploadToSpeaker(${sIdx})">上传图片</button>
+                        <button class="btn btn-secondary" style="font-size:11px;padding:6px 8px;"
+                            onclick="removeSpeaker(${sIdx})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // 绑定演讲人拖拽事件
+            bindSpeakerDragEvents();
+
+            // 绑定图片拖拽事件
+            bindImageDragEvents();
+        }
+
+        // 收起/展开演讲人
+        function toggleSpeakerCollapse(index) {
+            speakers[index].collapsed = !speakers[index].collapsed;
+            renderSpeakers();
+        }
+
+        // 演讲人拖拽排序
+        let draggedSpeakerIndex = null;
+        let currentDragType = null; // 'speaker' or 'image'
+
+        function bindSpeakerDragEvents() {
+            // 桌面端拖拽 - 只在手柄上
+            const handles = document.querySelectorAll('.drag-handle');
+            handles.forEach(handle => {
+                handle.setAttribute('draggable', 'true');
+                handle.addEventListener('dragstart', handleSpeakerDragStart);
+                handle.addEventListener('dragend', handleSpeakerDragEnd);
+            });
+
+            // 移动端触摸拖拽 - 在更大的区域（卡片头部）
+            const dragHandles = document.querySelectorAll('.drag-handle');
+            dragHandles.forEach(handle => {
+                handle.addEventListener('touchstart', handleSpeakerTouchStart, { passive: false });
+                handle.addEventListener('touchmove', handleSpeakerTouchMove, { passive: false });
+                handle.addEventListener('touchend', handleSpeakerTouchEnd);
+            });
+
+            // 拖拽目标（整个卡片）
+            const cards = document.querySelectorAll('.speaker-card');
+            cards.forEach(card => {
+                card.addEventListener('dragover', handleSpeakerDragOver);
+                card.addEventListener('dragleave', handleSpeakerDragLeave);
+                card.addEventListener('drop', handleSpeakerDrop);
+            });
+        }
+
+        // 移动端触摸拖拽变量
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let touchedSpeakerIndex = null;
+        let touchedSpeakerCard = null;
+
+        function handleSpeakerTouchStart(e) {
+            const handle = e.target.closest('.drag-handle');
+            if (!handle) return;
+
+            const card = handle.closest('.speaker-card');
+            if (!card) return;
+
+            e.stopPropagation(); // 阻止冒泡
+
+            touchedSpeakerIndex = parseInt(card.dataset.speakerIndex);
+            touchedSpeakerCard = card;
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+            card.classList.add('dragging');
+        }
+
+        function handleSpeakerTouchMove(e) {
+            if (touchedSpeakerIndex === null) return;
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，避免触发图片拖拽
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-card').forEach(c => {
+                c.classList.remove('drag-over', 'drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom');
+            });
+
+            // 使用 elementFromPoint 获取当前触摸点下的元素，而不是 e.target
+            const clientX = e.touches[0].clientX;
+            const clientY = e.touches[0].clientY;
+            const elementAtPoint = document.elementFromPoint(clientX, clientY);
+            const card = elementAtPoint ? elementAtPoint.closest('.speaker-card') : null;
+
+            if (card && card !== touchedSpeakerCard) {
+                // 计算触摸点相对于卡片中心的位置
+                const rect = card.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                const isLeft = clientX < centerX;
+                const isTop = clientY < centerY;
+
+                const dx = Math.abs(clientX - centerX) / (rect.width / 2);
+                const dy = Math.abs(clientY - centerY) / (rect.height / 2);
+
+                if (dx >= dy) {
+                    if (isLeft) {
+                        card.classList.add('drag-over-left');
+                    } else {
+                        card.classList.add('drag-over-right');
+                    }
+                } else {
+                    if (isTop) {
+                        card.classList.add('drag-over-top');
+                    } else {
+                        card.classList.add('drag-over-bottom');
+                    }
+                }
+            }
+        }
+
+        function handleSpeakerTouchEnd(e) {
+            if (touchedSpeakerIndex === null) return;
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-card').forEach(c => {
+                c.classList.remove('drag-over', 'drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom');
+            });
+
+            // 找到触摸结束位置的元素
+            const card = document.elementFromPoint(
+                e.changedTouches[0].clientX,
+                e.changedTouches[0].clientY
+            );
+            const targetCard = card ? card.closest('.speaker-card') : null;
+
+            if (targetCard) {
+                const rect = targetCard.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const clientX = e.changedTouches[0].clientX;
+                const clientY = e.changedTouches[0].clientY;
+
+                const isLeft = clientX < centerX;
+                const isTop = clientY < centerY;
+
+                const dx = Math.abs(clientX - centerX) / (rect.width / 2);
+                const dy = Math.abs(clientY - centerY) / (rect.height / 2);
+
+                let targetIndex = parseInt(targetCard.dataset.speakerIndex);
+
+                // 根据放置方向计算最终索引
+                if (dx >= dy) {
+                    // 水平方向
+                    if (!isLeft && targetIndex > touchedSpeakerIndex) {
+                        targetIndex = targetIndex + 1;
+                    }
+                } else {
+                    // 垂直方向
+                    if (!isTop && targetIndex > touchedSpeakerIndex) {
+                        targetIndex = targetIndex + 1;
+                    }
+                }
+
+                targetIndex = Math.max(0, Math.min(targetIndex, speakers.length - 1));
+
+                if (targetIndex !== touchedSpeakerIndex) {
+                    const [removed] = speakers.splice(touchedSpeakerIndex, 1);
+                    speakers.splice(targetIndex, 0, removed);
+                }
+            }
+
+            if (touchedSpeakerCard) {
+                touchedSpeakerCard.classList.remove('dragging');
+            }
+            touchedSpeakerIndex = null;
+            touchedSpeakerCard = null;
+            renderSpeakers();
+
+            renderSpeakers();
+        }
+
+        function handleSpeakerDragStart(e) {
+            const handle = e.target.closest('.drag-handle');
+            if (!handle) return;
+            currentDragType = 'speaker';
+            draggedSpeakerIndex = parseInt(handle.dataset.speakerIndex);
+            handle.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleSpeakerDragEnd(e) {
+            const handle = e.target.closest('.drag-handle');
+            if (handle) handle.classList.remove('dragging');
+            document.querySelectorAll('.speaker-card').forEach(card => {
+                card.classList.remove('drag-over', 'drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom');
+            });
+            draggedSpeakerIndex = null;
+            currentDragType = null;
+        }
+
+        function handleSpeakerDragOver(e) {
+            // 如果当前正在拖拽图片，忽略演讲人拖拽事件
+            if (currentDragType !== 'speaker') return;
+
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，避免触发图片拖拽
+            e.dataTransfer.dropEffect = 'move';
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-card').forEach(c => {
+                c.classList.remove('drag-over', 'drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom');
+            });
+
+            const card = e.target.closest('.speaker-card');
+            if (card && parseInt(card.dataset.speakerIndex) !== draggedSpeakerIndex) {
+                // 计算鼠标相对于卡片中心的位置
+                const rect = card.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                // 判断方向：优先左右，其次上下
+                const isLeft = e.clientX < centerX;
+                const isTop = e.clientY < centerY;
+
+                // 计算距离比例，决定是水平还是垂直放置
+                const dx = Math.abs(e.clientX - centerX) / (rect.width / 2);
+                const dy = Math.abs(e.clientY - centerY) / (rect.height / 2);
+
+                if (dx >= dy) {
+                    // 水平方向
+                    if (isLeft) {
+                        card.classList.add('drag-over-left');
+                    } else {
+                        card.classList.add('drag-over-right');
+                    }
+                } else {
+                    // 垂直方向
+                    if (isTop) {
+                        card.classList.add('drag-over-top');
+                    } else {
+                        card.classList.add('drag-over-bottom');
+                    }
+                }
+            }
+        }
+
+        function handleSpeakerDragLeave(e) {
+            const card = e.target.closest('.speaker-card');
+            if (card) {
+                card.classList.remove('drag-over', 'drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom');
+            }
+        }
+
+        function handleSpeakerDrop(e) {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，避免触发图片拖拽
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-card').forEach(c => {
+                c.classList.remove('drag-over', 'drag-over-left', 'drag-over-right', 'drag-over-top', 'drag-over-bottom');
+            });
+
+            const card = e.target.closest('.speaker-card');
+            if (!card) return;
+
+            const targetIndex = parseInt(card.dataset.speakerIndex);
+            if (targetIndex === draggedSpeakerIndex || draggedSpeakerIndex === null) return;
+
+            // 判断放置方向
+            const rect = card.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const isLeft = e.clientX < centerX;
+            const isTop = e.clientY < centerY;
+
+            const dx = Math.abs(e.clientX - centerX) / (rect.width / 2);
+            const dy = Math.abs(e.clientY - centerY) / (rect.height / 2);
+
+            let insertIndex = targetIndex;
+
+            if (dx >= dy) {
+                // 水平方向
+                if (!isLeft && targetIndex > draggedSpeakerIndex) {
+                    insertIndex = targetIndex + 1;
+                } else if (isLeft && targetIndex < draggedSpeakerIndex) {
+                    insertIndex = targetIndex;
+                } else if (!isLeft) {
+                    insertIndex = targetIndex + 1;
+                }
+            } else {
+                // 垂直方向
+                if (!isTop && targetIndex > draggedSpeakerIndex) {
+                    insertIndex = targetIndex + 1;
+                } else if (isTop && targetIndex < draggedSpeakerIndex) {
+                    insertIndex = targetIndex;
+                } else if (!isTop) {
+                    insertIndex = targetIndex + 1;
+                }
+            }
+
+            // 调整索引（因为移除后会改变后续元素的索引）
+            let finalIndex = insertIndex;
+            if (draggedSpeakerIndex < insertIndex) {
+                finalIndex = Math.min(insertIndex - 1, speakers.length - 1);
+            } else {
+                finalIndex = insertIndex;
+            }
+
+            const [removed] = speakers.splice(draggedSpeakerIndex, 1);
+            speakers.splice(finalIndex, 0, removed);
+
+            renderSpeakers();
+        }
+
+        // 图片拖拽排序
+        let draggedImage = null;
+        let draggedImageSpeakerIndex = null;
+        let draggedImageIndex = null;
+
+        function bindImageDragEvents() {
+            const images = document.querySelectorAll('.speaker-img');
+            const containers = document.querySelectorAll('.speaker-images');
+
+            images.forEach(img => {
+                // 桌面端拖拽
+                img.addEventListener('dragstart', handleImageDragStart);
+                img.addEventListener('dragend', handleImageDragEnd);
+                // 移动端触摸拖拽
+                img.addEventListener('touchstart', handleImageTouchStart, { passive: false });
+                img.addEventListener('touchmove', handleImageTouchMove, { passive: false });
+                img.addEventListener('touchend', handleImageTouchEnd);
+            });
+
+            containers.forEach(container => {
+                container.addEventListener('dragover', handleImageDragOver);
+                container.addEventListener('dragleave', handleImageDragLeave);
+                container.addEventListener('drop', handleImageDrop);
+            });
+        }
+
+        // 移动端图片触摸拖拽
+        let touchedImage = null;
+        let touchedImageSpeakerIndex = null;
+        let touchedImageIndex = null;
+        let touchStartImgX = 0;
+        let touchStartImgY = 0;
+        let imageTouchMoved = false;
+
+        // 处理图片点击（区分点击和拖拽）
+        function handleImageTap(speakerIndex, imageIndex, event) {
+            // 如果触摸过程中有移动，则不触发预览
+            if (imageTouchMoved) {
+                imageTouchMoved = false;
+                return;
+            }
+            showImagePreview(speakerIndex, imageIndex);
+        }
+
+        function handleImageTouchStart(e) {
+            const img = e.target.closest('.speaker-img');
+            if (!img) return;
+
+            e.preventDefault();
+            touchedImage = img;
+            touchedImageSpeakerIndex = parseInt(img.dataset.speakerIndex);
+            touchedImageIndex = parseInt(img.dataset.imageIndex);
+            touchStartImgX = e.touches[0].clientX;
+            touchStartImgY = e.touches[0].clientY;
+            imageTouchMoved = false;
+            img.classList.add('dragging');
+        }
+
+        function handleImageTouchMove(e) {
+            if (!touchedImage) return;
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，避免触发演讲人拖拽
+
+            // 检测是否有明显移动
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const distance = Math.sqrt(
+                Math.pow(currentX - touchStartImgX, 2) +
+                Math.pow(currentY - touchStartImgY, 2)
+            );
+
+            // 如果移动超过10像素，认为是拖拽
+            if (distance > 10) {
+                imageTouchMoved = true;
+            }
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-img').forEach(img => {
+                img.classList.remove('drag-over-left', 'drag-over-right');
+            });
+
+            const container = document.elementFromPoint(currentX, currentY);
+            const targetImg = container ? container.closest('.speaker-img') : null;
+
+            if (targetImg && targetImg !== touchedImage) {
+                // 计算触摸点相对于图片的位置
+                const rect = targetImg.getBoundingClientRect();
+                const imgCenterX = rect.left + rect.width / 2;
+
+                if (currentX < imgCenterX) {
+                    // 触摸点在左边，显示左边高亮
+                    targetImg.classList.add('drag-over-left');
+                } else {
+                    // 触摸点在右边，显示右边高亮
+                    targetImg.classList.add('drag-over-right');
+                }
+            }
+        }
+
+        function handleImageTouchEnd(e) {
+            if (!touchedImage) return;
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-img').forEach(img => {
+                img.classList.remove('drag-over-left', 'drag-over-right');
+            });
+
+            const targetImg = document.elementFromPoint(
+                e.changedTouches[0].clientX,
+                e.changedTouches[0].clientY
+            )?.closest('.speaker-img');
+
+            if (targetImg) {
+                const container = targetImg.closest('.speaker-images');
+                if (!container) return;
+
+                const targetSpeakerIndex = parseInt(container.dataset.speakerIndex);
+                const targetImgIndex = parseInt(targetImg.dataset.imageIndex);
+
+                // 判断应该放在目标图片的前面还是后面
+                const rect = targetImg.getBoundingClientRect();
+                const imgCenterX = rect.left + rect.width / 2;
+                const insertAfter = e.changedTouches[0].clientX >= imgCenterX;
+
+                if (targetSpeakerIndex === touchedImageSpeakerIndex) {
+                    // 同一个演讲人内部拖拽
+                    let targetIndex = insertAfter ? targetImgIndex + 1 : targetImgIndex;
+
+                    // 如果拖拽位置在自己之后，需要调整索引
+                    if (touchedImageIndex < targetIndex) {
+                        targetIndex = Math.max(0, targetIndex - 1);
+                    }
+
+                    if (targetIndex !== touchedImageIndex) {
+                        const [removed] = speakers[touchedImageSpeakerIndex].images.splice(touchedImageIndex, 1);
+                        targetIndex = Math.max(0, Math.min(targetIndex, speakers[targetSpeakerIndex].images.length));
+                        speakers[targetSpeakerIndex].images.splice(targetIndex, 0, removed);
+                    }
+                } else {
+                    // 跨演讲人拖拽
+                    const targetIndex = insertAfter ? targetImgIndex + 1 : targetImgIndex;
+                    const draggedImg = speakers[touchedImageSpeakerIndex].images[touchedImageIndex];
+                    speakers[touchedImageSpeakerIndex].images.splice(touchedImageIndex, 1);
+                    speakers[targetSpeakerIndex].images.splice(targetIndex, 0, draggedImg);
+                }
+            }
+
+            if (touchedImage) {
+                touchedImage.classList.remove('dragging');
+            }
+            document.querySelectorAll('.speaker-images').forEach(c => c.classList.remove('drag-over'));
+            touchedImage = null;
+            touchedImageSpeakerIndex = null;
+            touchedImageIndex = null;
+
+            renderSpeakers();
+        }
+
+        function handleImageDragStart(e) {
+            const img = e.target.closest('.speaker-img');
+            if (!img) return;
+
+            currentDragType = 'image';
+            draggedImageSpeakerIndex = parseInt(img.dataset.speakerIndex);
+            draggedImageIndex = parseInt(img.dataset.imageIndex);
+            draggedImage = speakers[draggedImageSpeakerIndex].images[draggedImageIndex];
+            img.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleImageDragEnd(e) {
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-img').forEach(img => {
+                img.classList.remove('drag-over-left', 'drag-over-right', 'dragging');
+            });
+            document.querySelectorAll('.speaker-images').forEach(c => {
+                c.classList.remove('drag-over');
+            });
+            draggedImage = null;
+            currentDragType = null;
+            draggedImageSpeakerIndex = null;
+            draggedImageIndex = null;
+        }
+
+        function handleImageDragOver(e) {
+            // 如果当前正在拖拽演讲人，忽略图片拖拽事件
+            if (currentDragType !== 'image') return;
+
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，避免触发演讲人拖拽
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-img').forEach(img => {
+                img.classList.remove('drag-over-left', 'drag-over-right');
+            });
+
+            const targetImg = e.target.closest('.speaker-img');
+            if (targetImg) {
+                // 计算鼠标点相对于图片的位置
+                const rect = targetImg.getBoundingClientRect();
+                const imgCenterX = rect.left + rect.width / 2;
+
+                if (e.clientX < imgCenterX) {
+                    targetImg.classList.add('drag-over-left');
+                } else {
+                    targetImg.classList.add('drag-over-right');
+                }
+            }
+        }
+
+        function handleImageDragLeave(e) {
+            const container = e.target.closest('.speaker-images');
+            if (container && !container.contains(e.relatedTarget)) {
+                container.classList.remove('drag-over');
+            }
+        }
+
+        function handleImageDrop(e) {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，避免触发演讲人拖拽
+
+            // 清除所有高亮状态
+            document.querySelectorAll('.speaker-img').forEach(img => {
+                img.classList.remove('drag-over-left', 'drag-over-right');
+            });
+
+            const targetImg = e.target.closest('.speaker-img');
+            if (!targetImg || !draggedImage) return;
+
+            const container = targetImg.closest('.speaker-images');
+            if (!container) return;
+
+            const targetSpeakerIndex = parseInt(container.dataset.speakerIndex);
+
+            // 判断应该放在目标图片的前面还是后面
+            const rect = targetImg.getBoundingClientRect();
+            const imgCenterX = rect.left + rect.width / 2;
+            const insertAfter = e.clientX >= imgCenterX;
+
+            // 获取目标图片的索引
+            const targetImgIndex = parseInt(targetImg.dataset.imageIndex);
+
+            if (targetSpeakerIndex === draggedImageSpeakerIndex) {
+                // 同一个演讲人内部拖拽
+                let targetIndex = insertAfter ? targetImgIndex + 1 : targetImgIndex;
+
+                // 如果拖拽位置在自己之后，需要调整索引
+                if (draggedImageIndex < targetIndex) {
+                    targetIndex = Math.max(0, targetIndex - 1);
+                }
+
+                if (targetIndex !== draggedImageIndex) {
+                    const [removed] = speakers[targetSpeakerIndex].images.splice(draggedImageIndex, 1);
+                    // 确保索引在有效范围内
+                    targetIndex = Math.max(0, Math.min(targetIndex, speakers[targetSpeakerIndex].images.length));
+                    speakers[targetSpeakerIndex].images.splice(targetIndex, 0, removed);
+                }
+            } else {
+                // 跨演讲人拖拽
+                const targetIndex = insertAfter ? targetImgIndex + 1 : targetImgIndex;
+                speakers[draggedImageSpeakerIndex].images.splice(draggedImageIndex, 1);
+                speakers[targetSpeakerIndex].images.splice(targetIndex, 0, draggedImage);
+            }
+
+            container.classList.remove('drag-over');
+            renderSpeakers();
+        }
+
+        // 当前选中的演讲人索引（用于单独上传）
+        let currentSpeakerIndex = -1;
+
+        // 图片上传 - 修复参数传递问题
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            handleFiles(event.target.files);
+            // 清空input以便再次选择相同文件
+            event.target.value = '';
+        });
+
+        // 从文件提取EXIF拍摄时间
+        function getExifDate(file) {
+            return new Promise((resolve) => {
+                // 如果EXIF库未加载，返回null
+                if (!window.EXIF) {
+                    resolve(null);
+                    return;
+                }
+                try {
+                    EXIF.getData(file, function() {
+                        try {
+                            const dateStr = EXIF.getTag(this, 'DateTimeOriginal');
+                            if (dateStr) {
+                                // EXIF日期格式: "YYYY:MM:DD HH:MM:SS"
+                                const [datePart, timePart] = dateStr.split(' ');
+                                const [year, month, day] = datePart.split(':');
+                                const [hour, minute, second] = timePart.split(':');
+                                const date = new Date(year, month - 1, day, hour, minute, second);
+                                resolve(date.getTime());
+                            } else {
+                                resolve(null);
+                            }
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    });
+                } catch (e) {
+                    resolve(null);
+                }
+            });
+        }
+
+        // 保存文件顺序（用于文件名排序）
+        let fileOrder = [];
+
+        async function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            if (currentSpeakerIndex < 0 || currentSpeakerIndex >= speakers.length) {
+                alert('请先选择演讲人');
+                return;
+            }
+
+            const fileArray = Array.from(files);
+            const targetSpeaker = speakers[currentSpeakerIndex];
+
+            // 保存文件名顺序
+            const currentOrder = fileArray.map(f => f.name);
+
+            // 获取每张图片的EXIF时间
+            const filesWithDate = await Promise.all(
+                fileArray
+                    .filter(file => file.type.startsWith('image/'))
+                    .map(async (file, index) => {
+                        const date = await getExifDate(file);
+                        return { file, date, name: file.name, originalIndex: index };
+                    })
+            );
+
+            // 按EXIF时间排序（从早到晚），没有时间的按原顺序
+            filesWithDate.sort((a, b) => {
+                if (a.date === null && b.date === null) return a.originalIndex - b.originalIndex;
+                if (a.date === null) return 1;
+                if (b.date === null) return -1;
+                return a.date - b.date;
+            });
+
+            // 保存排序后的文件名顺序（用于按文件名重排）
+            fileOrder = filesWithDate.map(f => f.name);
+
+            // 压缩并添加图片到当前选中的演讲人（存储对象包含src、filename和exifTime）
+            for (const { file, date } of filesWithDate) {
+                const compressed = await compressImage(file, 1024, 0.7);
+                targetSpeaker.images.push({ src: compressed, filename: file.name, exifTime: date });
+            }
+
+            renderSpeakers();
+            updateProcessButton();
+        }
+
+        // 按EXIF时间排序当前图片
+        function sortImagesByTime(speakerIndex) {
+            const speaker = speakers[speakerIndex];
+            if (!speaker || speaker.images.length <= 1) return;
+
+            console.log('Sorting images by time, count:', speaker.images.length);
+            console.log('exifTimes:', speaker.images.map(img => img.exifTime));
+
+            // 按EXIF时间排序（从早到晚），没有时间的放最后
+            speaker.images.sort((a, b) => {
+                const timeA = a.exifTime || 0;
+                const timeB = b.exifTime || 0;
+                if (timeA === 0 && timeB === 0) return 0;
+                if (timeA === 0) return 1;
+                if (timeB === 0) return -1;
+                return timeA - timeB;
+            });
+
+            renderSpeakers();
+        }
+
+        // 按文件名排序当前图片
+        function sortImagesByName(speakerIndex) {
+            const speaker = speakers[speakerIndex];
+            if (!speaker || speaker.images.length <= 1) return;
+
+            // 按文件名排序（支持中文和数字排序）
+            speaker.images.sort((a, b) => {
+                const nameA = a.filename || '';
+                const nameB = b.filename || '';
+                return nameA.localeCompare(nameB, 'zh-CN', { numeric: true });
+            });
+
+            renderSpeakers();
+        }
+
+        // 针对特定演讲人上传图片
+        function uploadToSpeaker(index) {
+            currentSpeakerIndex = index;
+            document.getElementById('fileInput').click();
+        }
+
+        // 图片压缩
+        function compressImage(file, maxWidth = 1024, quality = 0.7) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = height * maxWidth / width;
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateProcessButton() {
+            const totalImages = speakers.reduce((sum, s) => sum + s.images.length, 0);
+            const hasMeetingTheme = document.getElementById('meetingTheme').value.trim();
+            document.getElementById('processBtn').disabled = totalImages === 0 || !hasMeetingTheme || isProcessing;
+        }
+
+        // 监听会议主题变化
+        document.getElementById('meetingTheme').addEventListener('input', updateProcessButton);
+
+        // 清空
+        function clearAll() {
+            if (!confirm('确定清空所有内容？')) return;
+            speakers = [];
+            renderSpeakers();
+            document.getElementById('meetingTheme').value = '';
+            document.getElementById('meetingDate').value = '';
+            document.getElementById('resultSection').classList.remove('active');
+            checkUsage();
+        }
+
+        // 处理图片
+        async function processImages() {
+            console.log('开始处理图片...');
+            const meetingTheme = document.getElementById('meetingTheme').value.trim();
+            const meetingDate = document.getElementById('meetingDate').value.trim();
+            const totalImages = speakers.reduce((sum, s) => sum + s.images.length, 0);
+            console.log('会议主题:', meetingTheme, '图片数:', totalImages, '剩余次数:', remaining);
+            console.log('speakers:', speakers);
+
+            if (!meetingTheme) {
+                alert('请填写会议主题');
+                return;
+            }
+
+            if (totalImages === 0) {
+                alert('请先上传图片');
+                return;
+            }
+
+            if (!settings.debugMode && remaining < totalImages) {
+                alert(`图片数量超过剩余次数（${remaining}），请减少图片或开启调试模式`);
+                return;
+            }
+
+            console.log('通过验证，开始处理...');
+            isProcessing = true;
+            document.getElementById('processBtn').disabled = true;
+            document.getElementById('progressSection').classList.add('active');
+            document.getElementById('resultSection').classList.remove('active');
+
+            const pdfImages = [];
+            let processedCount = 0;
+            const concurrency = settings.concurrency || 3;
+
+            try {
+                // 为每个演讲人生成独立的处理结果
+                const speakerResults = [];
+
+                // 先识别所有演讲人的信息（姓名和标题）
+                document.getElementById('progressText').textContent = '识别演讲人信息...';
+                for (const speaker of speakers) {
+                    if (speaker.images.length === 0) continue;
+
+                    // 初始化该演讲人的结果数组
+                    speakerResults.push({
+                        speaker: speaker,
+                        contents: []
+                    });
+
+                    // 如果姓名或标题为空，尝试通过AI识别
+                    if (!speaker.name || !speaker.title) {
+                        await recognizeSpeakerInfo(speaker, meetingTheme);
+                        renderSpeakers();  // 更新UI显示识别结果
+                    }
+                }
+
+                // 然后处理每个演讲人的图片
+                for (const sr of speakerResults) {
+                    const speaker = sr.speaker;
+                    if (speaker.images.length === 0) continue;
+
+                    document.getElementById('progressText').textContent = `处理演讲人: ${speaker.name || '未命名'}...`;
+
+                    // 并发处理该演讲人的图片
+                    const batchSize = concurrency;
+                    for (let i = 0; i < speaker.images.length; i += batchSize) {
+                        const batch = speaker.images.slice(i, i + batchSize);
+                        const promises = batch.map((img, idx) =>
+                            processImage(img, i + idx + 1, meetingTheme)
+                        );
+                        const batchResults = await Promise.all(promises);
+
+                        batchResults.forEach((result, idx) => {
+                            if (result.success) {
+                                sr.contents.push(result.content);
+                            } else {
+                                sr.contents.push(`## 第${i + idx + 1}页\n\n处理失败: ${result.error}`);
+                            }
+                            processedCount++;
+                            const progress = (processedCount / totalImages) * 80;
+                            document.getElementById('progressBar').style.width = progress + '%';
+                        });
+                    }
+
+                    // 保存压缩后的图片用于PDF
+                    pdfImages.push({name: speaker.name || '未命名演讲人', title: speaker.title || '', images: [...speaker.images]});
+                }
+
+                // 收集所有内容用于生成总结
+                const allContents = speakerResults.map(sr => sr.contents.join('\n\n')).join('\n\n---\n\n');
+
+                // 生成总结
+                document.getElementById('progressText').textContent = '生成会议总结...';
+                const summaryResult = await generateSummary(allContents, meetingTheme);
+
+                // 构建最终结果
+                let finalMarkdown = `# ${meetingTheme}\n`;
+                if (meetingDate) finalMarkdown += `**日期**: ${meetingDate}\n\n`;
+                finalMarkdown += '---\n\n';
+
+                // 按演讲人组织内容
+                for (const sr of speakerResults) {
+                    const speaker = sr.speaker;
+                    finalMarkdown += `## 演讲人: ${speaker.name || '未命名演讲人'}\n`;
+                    if (speaker.title) {
+                        finalMarkdown += `**演讲标题**: ${speaker.title}\n\n`;
+                    }
+
+                    // 该演讲人的内容
+                    finalMarkdown += sr.contents.join('\n\n') + '\n\n---\n\n';
+                }
+
+                // 添加整体总结
+                if (summaryResult.success) {
+                    finalMarkdown += `# 会议总结\n\n${summaryResult.content}`;
+                }
+
+                resultData.markdown = finalMarkdown;
+                resultData.pdfImages = pdfImages;
+                resultData.meetingTheme = meetingTheme;
+
+                document.getElementById('resultContent').textContent = finalMarkdown;
+                document.getElementById('resultSection').classList.add('active');
+
+                if (!settings.debugMode) {
+                    remaining -= totalImages;
+                    updateRemainingDisplay();
+                }
+
+                // 处理完成，不弹窗
+                document.getElementById('processBtn').textContent = '再次处理';
+
+            } catch (e) {
+                // 处理失败，不弹窗
+            } finally {
+                isProcessing = false;
+                document.getElementById('progressSection').classList.remove('active');
+                document.getElementById('progressBar').style.width = '0%';
+                updateProcessButton();
+            }
+        }
+
+        // 处理单张图片
+        async function processImage(imageBase64, pageNum, theme) {
+            const base64 = imageBase64.split(',')[1];
+            const apiKey = settings.apiKey || getDefaultApiKey();
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'process',
+                        image: base64,
+                        pageNumber: pageNum,
+                        apiKey: apiKey,
+                        theme: theme,
+                        baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
+                        model: settings.model || DEFAULT_MODEL,
+                        debugMode: settings.debugMode
+                    })
+                });
+                return await res.json();
+            } catch (e) {
+                return {success: false, error: e.message};
+            }
+        }
+
+        // 识别标题和演讲人
+        async function recognizeTitle(imageBase64, theme) {
+            const base64 = imageBase64.split(',')[1];
+            const apiKey = settings.apiKey || getDefaultApiKey();
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'recognize_title',
+                        image: base64,
+                        theme: theme,
+                        apiKey: apiKey,
+                        baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
+                        model: settings.model || DEFAULT_MODEL,
+                        debugMode: settings.debugMode
+                    })
+                });
+                return await res.json();
+            } catch (e) {
+                return {success: false, name: '', title: ''};
+            }
+        }
+
+        // 识别演讲人信息（姓名和标题）
+        async function recognizeSpeakerInfo(speaker, theme) {
+            if (!speaker.images || speaker.images.length === 0) return;
+
+            // 使用第一张图片识别
+            const firstImage = speaker.images[0].src;
+            const result = await recognizeTitle(firstImage, theme);
+
+            if (result.success) {
+                // 如果用户没有填写姓名，则使用识别到的姓名
+                if (!speaker.name && result.name) {
+                    speaker.name = result.name;
+                }
+                // 如果用户没有填写标题，则使用识别到的标题
+                if (!speaker.title && result.title) {
+                    speaker.title = result.title;
+                }
+                speaker.autoRecognized = true;
+            }
+        }
+
+        // 生成总结
+        async function generateSummary(content, theme) {
+            const apiKey = settings.apiKey || getDefaultApiKey();
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'summary',
+                        content: content,
+                        apiKey: apiKey,
+                        baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
+                        model: settings.model || DEFAULT_MODEL,
+                        debugMode: settings.debugMode
+                    })
+                });
+                return await res.json();
+            } catch (e) {
+                return {success: false, content: ''};
+            }
+        }
+
+        // 获取默认API Key（需要从后端获取）
+        function getDefaultApiKey() {
+            return ''; // 使用后端配置的默认key
+        }
+
+        // 下载Markdown
+        function downloadMarkdown() {
+            const blob = new Blob([resultData.markdown], {type: 'text/markdown;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${resultData.meetingTheme || '会议总结'}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 下载PDF
+        async function downloadPDF() {
+            if (!resultData.pdfImages || resultData.pdfImages.length === 0) {
+                alert('没有可用的图片');
+                return;
+            }
+
+            // 加载jsPDF
+            const { jsPDF } = window.jspdf || await loadJsPDF();
+            if (!jsPDF) {
+                alert('PDF库加载失败');
+                return;
+            }
+
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            let yPos = 20;
+
+            for (let speakerIdx = 0; speakerIdx < resultData.pdfImages.length; speakerIdx++) {
+                const speaker = resultData.pdfImages[speakerIdx];
+                const speakerNum = speakerIdx + 1;
+
+                // 演讲者标题
+                if (yPos > pageHeight - 40) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                doc.setFontSize(16);
+                doc.text(`${speakerNum}.`, 20, yPos);
+                yPos += 15;
+
+                // 添加该演讲人的所有图片
+                for (let imgIdx = 0; imgIdx < speaker.images.length; imgIdx++) {
+                    const img = speaker.images[imgIdx].src;
+
+                    try {
+                        const imgProps = doc.getImageProperties(img);
+                        const imgWidth = 170;
+                        let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+                        // 限制图片最大高度为页面的一半，确保每页最多1-2张
+                        const maxHeight = 130;
+                        let finalWidth = imgWidth;
+                        let finalHeight = imgHeight;
+
+                        if (imgHeight > maxHeight) {
+                            finalHeight = maxHeight;
+                            finalWidth = (imgProps.width * maxHeight) / imgProps.height;
+                            imgHeight = maxHeight;
+                        }
+
+                        // 检查是否需要分页（确保图片完全显示）
+                        if (yPos + imgHeight > pageHeight - 10) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+
+                        doc.addImage(img, 'JPEG', 20, yPos, finalWidth, finalHeight);
+                        yPos += finalHeight + 10;
+                    } catch (e) {
+                        console.error('添加图片失败:', e);
+                        yPos += 10;
+                    }
+                }
+
+                yPos += 10;
+            }
+
+            // 保存PDF
+            const filename = (resultData.meetingTheme || '会议资料') + '.pdf';
+            doc.save(filename);
+        }
+
+        // 加载exif-js库
+        function loadExifJs() {
+            return new Promise((resolve) => {
+                if (window.EXIF) {
+                    resolve(window.EXIF);
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js';
+                script.onload = () => resolve(window.EXIF);
+                script.onerror = () => resolve(null);
+                document.head.appendChild(script);
+            });
+        }
+
+        // 加载jsPDF
+        function loadJsPDF() {
+            return new Promise((resolve) => {
+                if (window.jspdf) {
+                    resolve(window.jspdf);
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                script.onload = () => {
+                    // 等待jsPDF初始化完成
+                    setTimeout(() => resolve(window.jspdf), 100);
+                };
+                script.onerror = () => resolve(null);
+                document.head.appendChild(script);
+            });
+        }
+
+        // 复制结果
+        // 图片预览功能
+        let previewImages = [];
+        let previewIndex = 0;
+        let currentPreviewSpeakerIndex = -1;
+
+        function showImagePreview(speakerIndex, imageIndex) {
+            const speaker = speakers[speakerIndex];
+            if (!speaker || !speaker.images || speaker.images.length === 0) return;
+
+            previewImages = speaker.images;
+            currentPreviewSpeakerIndex = speakerIndex;
+            previewIndex = imageIndex;
+
+            updatePreviewImage();
+            document.getElementById('imagePreviewModal').classList.add('active');
+        }
+
+        function updatePreviewImage() {
+            document.getElementById('previewImage').src = previewImages[previewIndex].src;
+            document.getElementById('previewCounter').textContent = `${previewIndex + 1} / ${previewImages.length}`;
+        }
+
+        function closeImagePreview(e) {
+            if (e && e.target !== e.currentTarget && !e.target.classList.contains('nav-btn')) return;
+            closeImagePreviewModal();
+        }
+
+        function closeImagePreviewModal() {
+            document.getElementById('imagePreviewModal').classList.remove('active');
+        }
+
+        function previewPrevImage(e) {
+            if (e) e.stopPropagation();
+            previewIndex = (previewIndex - 1 + previewImages.length) % previewImages.length;
+            updatePreviewImage();
+        }
+
+        function previewNextImage(e) {
+            if (e) e.stopPropagation();
+            previewIndex = (previewIndex + 1) % previewImages.length;
+            updatePreviewImage();
+        }
+
+        // 键盘导航
+        document.addEventListener('keydown', function(e) {
+            if (!document.getElementById('imagePreviewModal').classList.contains('active')) return;
+            if (e.key === 'ArrowLeft') previewPrevImage();
+            if (e.key === 'ArrowRight') previewNextImage();
+            if (e.key === 'Escape') closeImagePreviewModal();
+        });
+
+        function copyResult(){
+            navigator.clipboard.writeText(resultData.markdown);
+        }
+    </script>
+</body>
+</html>
