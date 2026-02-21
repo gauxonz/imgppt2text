@@ -2,5 +2,9 @@ name = "imgppt2txt-api"
 compatibility_date = "2024-01-01"
 main = "workers.js"
 
+routes = [
+  { pattern = "imgppt2txt-api.8611092.xyz", zone_name = "8611092.xyz" }
+]
+
 [vars]
 DEFAULT_MODEL = "qwen3.5-plus"

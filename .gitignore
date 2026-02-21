@@ -35,3 +35,7 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.bak
+
+# 子模块git（不跟踪前端子仓库）
+imgppt2text-frontend/.git
+workers/.git

@@ -7,8 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 0; }
-        .container { max-width: 900px; margin: 0 auto; background: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .bottom-bar { flex-shrink: 0; background: white; border-top: 1px solid #eee; }
+        .container { max-width: 900px; margin: 0 auto; background: white; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
         .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .header-left { display: flex; align-items: center; gap: 12px; }
         .header h1 { font-size: 20px; }
@@ -82,23 +81,6 @@
         .action-buttons .btn-clear { flex: 0 0 auto; padding: 12px 16px; font-size: 13px; }
         .action-buttons .btn-process { flex: 1; padding: 14px 24px; font-size: 16px; font-weight: 600; }
 
-        /* 进度条 */
-        .progress-section { display: none; padding: 12px 16px; }
-        .progress-section.active { display: block; }
-        .progress-text { text-align: center; margin-bottom: 8px; color: #666; font-size: 14px; }
-        .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; background: linear-gradient(135deg, #667eea, #764ba2); transition: width 0.3s; }
-
-        /* 结果区域 */
-        .result-section { display: none; padding: 16px; }
-        .result-section.active { display: block; }
-        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .result-title { font-size: 18px; font-weight: 600; color: #333; }
-        .result-actions { display: flex; gap: 8px; }
-        .result-content { background: #f8f9fa; border-radius: 8px; padding: 20px; max-height: 500px; overflow-y: auto; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
-        .result-content h2 { color: #667eea; margin: 16px 0 8px; font-size: 18px; }
-        .result-content h3 { color: #333; margin: 12px 0 6px; font-size: 16px; }
-
         /* 弹窗 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
@@ -116,6 +98,58 @@
         #fileInput { display: none; }
 
         /* 图片预览弹窗 */
+        /* Toast 提示 */
+        .toast { visibility: hidden; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 8px; z-index: 3000; font-size: 14px; max-width: 80%; text-align: center; word-wrap: break-word; opacity: 0; transition: opacity 0.3s, visibility 0.3s; }
+        .toast.show { visibility: visible; opacity: 1; }
+        .toast.success { background: #4caf50; }
+        .toast.error { background: #f44336; }
+        .toast.info { background: #2196f3; }
+
+        /* 确认对话框 */
+        .confirm-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; align-items: center; justify-content: center; }
+        .confirm-modal.active { display: flex; }
+        .confirm-content { background: white; border-radius: 12px; padding: 24px; max-width: 320px; width: 90%; text-align: center; }
+        .confirm-message { margin-bottom: 20px; font-size: 16px; color: #333; }
+        .confirm-buttons { display: flex; gap: 12px; justify-content: center; }
+        .confirm-buttons .btn { flex: 1; }
+
+        /* 底部操作栏 */
+        /* 进度条 */
+        .progress-section { display: none; background: white; border-top: 1px solid #eee; padding: 12px 16px; position: fixed; bottom: 60px; left: 0; right: 0; max-width: 900px; margin: 0 auto; z-index: 99; }
+        .progress-section.active { display: block; }
+        .progress-text { text-align: center; margin-bottom: 8px; color: #666; font-size: 14px; }
+        .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(135deg, #667eea, #764ba2); transition: width 0.3s; }
+
+        /* 结果操作按钮栏 */
+        .result-actions-bar { display: none; background: white; border-top: 1px solid #eee; padding: 12px 16px; gap: 8px; flex-wrap: wrap; position: fixed; bottom: 60px; left: 0; right: 0; max-width: 900px; margin: 0 auto; z-index: 99; }
+        .result-actions-bar.active { display: flex; }
+        .result-actions-bar .btn { flex: 1; min-width: 100px; font-size: 13px; padding: 10px 12px; }
+
+        /* 固定底部操作按钮 */
+        .bottom-bar { display: flex; gap: 12px; background: white; border-top: 1px solid #eee; padding: 12px 16px; padding-bottom: max(12px, env(safe-area-inset-bottom)); position: fixed; bottom: 0; left: 0; right: 0; max-width: 900px; margin: 0 auto; z-index: 100; }
+        .bottom-bar .btn-clear { flex: 0 0 auto; }
+        .bottom-bar .btn-process { flex: 1; }
+
+        /* 结果预览弹窗 */
+        .preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+        .preview-modal.active { display: flex; }
+        .preview-container { background: white; width: 100%; height: 100%; max-width: 900px; display: flex; flex-direction: column; }
+        .preview-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+        .preview-title { font-size: 16px; font-weight: 600; color: #333; }
+        .preview-header-actions { display: flex; gap: 8px; align-items: center; }
+        .preview-header-actions .btn { padding: 6px 12px; font-size: 12px; }
+        .preview-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #999; padding: 0 8px; }
+        .preview-content { flex: 1; overflow-y: auto; padding: 16px; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+        .preview-content h2 { color: #667eea; margin: 16px 0 8px; font-size: 18px; }
+        .preview-content h3 { color: #333; margin: 12px 0 6px; font-size: 16px; }
+        .preview-content ul, .preview-content ol { margin: 8px 0; padding-left: 20px; }
+        .preview-content li { margin: 4px 0; }
+
+        /* 内容区域底部留白，为底部栏留空间 */
+        .content { padding-bottom: 120px; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateX(-50%) translateY(-20px); } 15% { opacity: 1; transform: translateX(-50%) translateY(0); } 85% { opacity: 1; transform: translateX(-50%) translateY(0); } 100% { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+
         .image-preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
         .image-preview-modal.active { display: flex; }
         .image-preview-modal img { max-width: 95%; max-height: 95%; object-fit: contain; }
@@ -127,6 +161,18 @@
     </style>
 </head>
 <body>
+    <!-- Toast 提示组件 -->
+    <div id="toast" class="toast"></div>
+    <!-- 确认对话框 -->
+    <div id="confirmModal" class="confirm-modal">
+        <div class="confirm-content">
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-buttons">
+                <button class="btn btn-secondary" id="confirmCancelBtn">取消</button>
+                <button class="btn btn-primary" id="confirmOkBtn">确定</button>
+            </div>
+        </div>
+    </div>
     <div class="container">
         <div class="header">
             <div class="header-left">
@@ -210,36 +256,82 @@
             <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
         </div>
 
-        <!-- 底部操作栏 -->
+        <!-- 进度条（固定在底部操作栏上方） -->
+        <div class="progress-section" id="progressSection">
+            <div class="progress-text" id="progressText">处理中...</div>
+            <div class="progress-bar"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+        </div>
+
+        <!-- 结果操作按钮栏（固定在底部操作栏上方） -->
+        <div class="result-actions-bar" id="resultActionsBar">
+            <button class="btn btn-primary" onclick="showResultPreview()">预览结果</button>
+            <button class="btn btn-secondary" onclick="downloadMarkdown()">下载文字总结</button>
+            <button class="btn btn-secondary" onclick="downloadPDF()">下载图片PDF</button>
+        </div>
+
+        <!-- 固定底部的操作按钮 -->
         <div class="bottom-bar">
-            <!-- 操作按钮 -->
-            <div class="action-buttons">
-                <button class="btn btn-secondary btn-clear" onclick="clearAll()">清空重置</button>
-                <button class="btn btn-primary btn-process" id="processBtn" onclick="console.log('按钮被点击'); processImages()">开始处理</button>
-            </div>
+            <button class="btn btn-secondary btn-clear" onclick="clearAll()">清空重置</button>
+            <button class="btn btn-primary btn-process" id="processBtn" onclick="processImages()">开始处理</button>
+        </div>
 
-            <!-- 进度条 -->
-            <div class="progress-section" id="progressSection">
-                <div class="progress-text" id="progressText">处理中...</div>
-                <div class="progress-bar"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
-            </div>
-
-            <!-- 结果区域 -->
-            <div class="result-section" id="resultSection">
-                <div class="result-header">
-                    <div class="result-title">📝 识别结果</div>
-                    <div class="result-actions">
-                        <button class="btn btn-secondary" onclick="downloadMarkdown()">下载MD</button>
-                        <button class="btn btn-secondary" onclick="downloadPDF()">下载PDF</button>
-                        <button class="btn btn-secondary" onclick="copyResult()">复制</button>
+        <!-- 结果预览弹窗 -->
+        <div class="preview-modal" id="previewModal" onclick="closePreviewModal(event)">
+            <div class="preview-container">
+                <div class="preview-header">
+                    <span class="preview-title">识别结果</span>
+                    <div class="preview-header-actions">
+                        <button class="btn btn-secondary" onclick="copyResult(); showToast('已复制到剪贴板', 'success');">复制</button>
+                        <button class="preview-close" onclick="closePreviewModal(null)">&times;</button>
                     </div>
                 </div>
-                <div class="result-content" id="resultContent"></div>
+                <div class="preview-content" id="previewContent"></div>
             </div>
         </div>
     </div>
 
     <script>
+        // Toast 提示函数
+        function showToast(message, type = 'info') {
+            console.log('showToast called:', message, type);
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type + ' show';
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 2500);
+        }
+
+        // 确认对话框函数
+        function confirmDialog(message) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const msgEl = document.getElementById('confirmMessage');
+                const okBtn = document.getElementById('confirmOkBtn');
+                const cancelBtn = document.getElementById('confirmCancelBtn');
+
+                msgEl.textContent = message;
+                modal.classList.add('active');
+
+                const handleOk = () => {
+                    cleanup();
+                    resolve(true);
+                };
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+                const cleanup = () => {
+                    modal.classList.remove('active');
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                };
+
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+            });
+        }
+
         // 配置
         const API_URL = 'https://imgppt2txt-api.8611092.xyz/';
         const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
@@ -294,12 +386,12 @@
                 if (data.success && data.valid) {
                     document.getElementById('debugModeRow').style.display = 'flex';
                     document.getElementById('debugModeInput').checked = true;
-                    alert('验证成功，已开启调试模式');
+                    showToast('验证成功，已开启调试模式', 'success');
                 } else {
-                    alert('密码错误');
+                    showToast('密码错误', 'error');
                 }
             } catch (e) {
-                alert('验证失败');
+                showToast('验证失败，请检查网络连接', 'error');
             }
         }
 
@@ -334,18 +426,18 @@
             const model = document.getElementById('modelInput').value.trim() || DEFAULT_MODEL;
 
             if (!apiKey) {
-                alert('请填写API Key');
+                showToast('请填写API Key', 'info');
                 return;
             }
 
-            alert('验证通过：\nAPI Key: ' + apiKey.substring(0, 10) + '...\nBase URL: ' + baseUrl + '\nModel: ' + model);
+            showToast('API Key: ' + apiKey.substring(0, 10) + '...\nBase URL: ' + baseUrl + '\nModel: ' + model, 'success');
         }
 
         // 测试API Key
         async function testApiKey() {
             const apiKey = document.getElementById('apiKeyInput').value.trim();
             if (!apiKey) {
-                alert('请先填写API Key');
+                showToast('请先填写API Key', 'info');
                 return;
             }
 
@@ -371,12 +463,12 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert('✅ API Key 有效！模型：' + (data.model || '未知'));
+                    showToast('API Key 有效！模型：' + (data.model || '未知'), 'success');
                 } else {
-                    alert('❌ API Key 无效：' + (data.error?.message || '未知错误'));
+                    showToast('API Key 无效：' + (data.error?.message || '未知错误'), 'error');
                 }
             } catch (e) {
-                alert('❌ 连接失败：' + e.message);
+                showToast('连接失败：' + e.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '测试API Key';
@@ -1129,7 +1221,7 @@
         async function handleFiles(files) {
             if (!files || files.length === 0) return;
             if (currentSpeakerIndex < 0 || currentSpeakerIndex >= speakers.length) {
-                alert('请先选择演讲人');
+                showToast('请先选择演讲人', 'info');
                 return;
             }
 
@@ -1243,20 +1335,21 @@
         function updateProcessButton() {
             const totalImages = speakers.reduce((sum, s) => sum + s.images.length, 0);
             const hasMeetingTheme = document.getElementById('meetingTheme').value.trim();
-            document.getElementById('processBtn').disabled = totalImages === 0 || !hasMeetingTheme || isProcessing;
+            // 只在处理中时禁用按钮，验证由点击后处理
+            document.getElementById('processBtn').disabled = isProcessing;
         }
 
         // 监听会议主题变化
         document.getElementById('meetingTheme').addEventListener('input', updateProcessButton);
 
         // 清空
-        function clearAll() {
-            if (!confirm('确定清空所有内容？')) return;
+        async function clearAll() {
+            if (!await confirmDialog('确定清空所有内容？')) return;
             speakers = [];
             renderSpeakers();
             document.getElementById('meetingTheme').value = '';
             document.getElementById('meetingDate').value = '';
-            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('resultActionsBar').classList.remove('active');
             checkUsage();
         }
 
@@ -1270,25 +1363,30 @@
             console.log('speakers:', speakers);
 
             if (!meetingTheme) {
-                alert('请填写会议主题');
+                console.log('验证失败: 未填写会议主题');
+                showToast('请填写会议主题', 'info');
                 return;
             }
 
             if (totalImages === 0) {
-                alert('请先上传图片');
+                console.log('验证失败: 未上传图片');
+                showToast('请先上传图片', 'info');
                 return;
             }
 
             if (!settings.debugMode && remaining < totalImages) {
-                alert(`图片数量超过剩余次数（${remaining}），请减少图片或开启调试模式`);
+                console.log('验证失败: 剩余次数不足');
+                showToast('图片数量超过剩余次数（' + remaining + '），请减少图片或开启调试模式', 'info');
                 return;
             }
+
+            console.log('验证通过，开始处理...');
 
             console.log('通过验证，开始处理...');
             isProcessing = true;
             document.getElementById('processBtn').disabled = true;
             document.getElementById('progressSection').classList.add('active');
-            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('resultActionsBar').classList.remove('active');
 
             const pdfImages = [];
             let processedCount = 0;
@@ -1303,6 +1401,8 @@
                 for (const speaker of speakers) {
                     if (speaker.images.length === 0) continue;
 
+                    console.log('处理演讲人:', speaker.name || '未命名', '图片数:', speaker.images.length);
+
                     // 初始化该演讲人的结果数组
                     speakerResults.push({
                         speaker: speaker,
@@ -1311,8 +1411,12 @@
 
                     // 如果姓名或标题为空，尝试通过AI识别
                     if (!speaker.name || !speaker.title) {
-                        await recognizeSpeakerInfo(speaker, meetingTheme);
-                        renderSpeakers();  // 更新UI显示识别结果
+                        try {
+                            await recognizeSpeakerInfo(speaker, meetingTheme);
+                            renderSpeakers();  // 更新UI显示识别结果
+                        } catch (e) {
+                            console.error('识别演讲人信息失败:', e);
+                        }
                     }
                 }
 
@@ -1328,7 +1432,7 @@
                     for (let i = 0; i < speaker.images.length; i += batchSize) {
                         const batch = speaker.images.slice(i, i + batchSize);
                         const promises = batch.map((img, idx) =>
-                            processImage(img, i + idx + 1, meetingTheme)
+                            processImage(img.src, i + idx + 1, meetingTheme)
                         );
                         const batchResults = await Promise.all(promises);
 
@@ -1381,19 +1485,28 @@
                 resultData.pdfImages = pdfImages;
                 resultData.meetingTheme = meetingTheme;
 
-                document.getElementById('resultContent').textContent = finalMarkdown;
-                document.getElementById('resultSection').classList.add('active');
+                // 将结果设置到预览区域
+                document.getElementById('previewContent').innerHTML = renderMarkdown(finalMarkdown);
+                // 显示结果操作按钮栏
+                document.getElementById('resultActionsBar').classList.add('active');
 
                 if (!settings.debugMode) {
                     remaining -= totalImages;
                     updateRemainingDisplay();
                 }
 
-                // 处理完成，不弹窗
+                // 处理完成
+                showToast('处理完成', 'success');
                 document.getElementById('processBtn').textContent = '再次处理';
 
             } catch (e) {
-                // 处理失败，不弹窗
+                console.error('处理失败:', e);
+                showToast('处理失败: ' + e.message, 'error');
+                // 即使失败也尝试显示已处理的内容
+                if (resultData.markdown) {
+                    document.getElementById('previewContent').innerHTML = renderMarkdown(resultData.markdown || '处理过程中出现错误');
+                    document.getElementById('resultActionsBar').classList.add('active');
+                }
             } finally {
                 isProcessing = false;
                 document.getElementById('progressSection').classList.remove('active');
@@ -1404,6 +1517,7 @@
 
         // 处理单张图片
         async function processImage(imageBase64, pageNum, theme) {
+            console.log('processImage开始, pageNum:', pageNum, 'imageBase64长度:', imageBase64 ? imageBase64.length : 0);
             const base64 = imageBase64.split(',')[1];
             const apiKey = settings.apiKey || getDefaultApiKey();
 
@@ -1422,16 +1536,21 @@
                         debugMode: settings.debugMode
                     })
                 });
-                return await res.json();
+                const result = await res.json();
+                console.log('processImage完成, pageNum:', pageNum, 'result:', result.success ? '成功' : '失败');
+                return result;
             } catch (e) {
+                console.error('processImage失败, pageNum:', pageNum, 'error:', e);
                 return {success: false, error: e.message};
             }
         }
 
         // 识别标题和演讲人
         async function recognizeTitle(imageBase64, theme) {
+            console.log('调用recognizeTitle, imageBase64长度:', imageBase64 ? imageBase64.length : 0);
             const base64 = imageBase64.split(',')[1];
             const apiKey = settings.apiKey || getDefaultApiKey();
+            console.log('apiKey:', apiKey ? '已设置' : '未设置');
 
             try {
                 const res = await fetch(API_URL, {
@@ -1447,19 +1566,25 @@
                         debugMode: settings.debugMode
                     })
                 });
-                return await res.json();
+                const result = await res.json();
+                console.log('recognizeTitle返回:', result);
+                return result;
             } catch (e) {
+                console.error('recognizeTitle失败:', e);
                 return {success: false, name: '', title: ''};
             }
         }
 
         // 识别演讲人信息（姓名和标题）
         async function recognizeSpeakerInfo(speaker, theme) {
+            console.log('recognizeSpeakerInfo开始, speaker:', speaker.name, 'images:', speaker.images ? speaker.images.length : 0);
             if (!speaker.images || speaker.images.length === 0) return;
 
             // 使用第一张图片识别
             const firstImage = speaker.images[0].src;
+            console.log('firstImage长度:', firstImage ? firstImage.length : 0);
             const result = await recognizeTitle(firstImage, theme);
+            console.log('recognizeSpeakerInfo完成, result:', result);
 
             if (result.success) {
                 // 如果用户没有填写姓名，则使用识别到的姓名
@@ -1516,14 +1641,14 @@
         // 下载PDF
         async function downloadPDF() {
             if (!resultData.pdfImages || resultData.pdfImages.length === 0) {
-                alert('没有可用的图片');
+                showToast('没有可用的图片', 'info');
                 return;
             }
 
             // 加载jsPDF
             const { jsPDF } = window.jspdf || await loadJsPDF();
             if (!jsPDF) {
-                alert('PDF库加载失败');
+                showToast('PDF库加载失败', 'error');
                 return;
             }
 
@@ -1671,6 +1796,56 @@
             if (e.key === 'ArrowLeft') previewPrevImage();
             if (e.key === 'ArrowRight') previewNextImage();
             if (e.key === 'Escape') closeImagePreviewModal();
+        });
+
+        // 简单的Markdown渲染函数
+        function renderMarkdown(text) {
+            if (!text) return '';
+
+            let html = text
+                // 转义HTML
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                // 标题
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                // 粗体
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 列表
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+                // 换行
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+
+            // 包装列表
+            html = html.replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>');
+            html = html.replace(/<\/ul>\s*<ul>/g, '');
+
+            return '<p>' + html + '</p>';
+        }
+
+        // 显示结果预览
+        function showResultPreview() {
+            if (!resultData.markdown) {
+                showToast('没有可预览的内容', 'info');
+                return;
+            }
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        // 关闭预览弹窗
+        function closePreviewModal(e) {
+            if (e && e.target !== e.currentTarget && !e.target.classList.contains('preview-close')) return;
+            document.getElementById('previewModal').classList.remove('active');
+        }
+
+        // 键盘导航（预览弹窗）
+        document.addEventListener('keydown', function(e) {
+            if (!document.getElementById('previewModal').classList.contains('active')) return;
+            if (e.key === 'Escape') closePreviewModal(null);
         });
 
         function copyResult(){
