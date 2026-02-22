@@ -9,7 +9,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #009688 0%, #00796b 100%); min-height: 100vh; padding: 0; }
-        .container { max-width: 900px; margin: 0 auto; background: white; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+        .container { max-width: 900px; margin: 0 auto; background: #f8f8f8; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
         .header { background: linear-gradient(135deg, #009688, #00796b); color: white; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -50,6 +50,8 @@
         .meeting-info { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
         .meeting-info input { flex: 1 1 calc(50% - 6px); min-width: 150px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
         .meeting-info input:focus { outline: none; border-color: #009688; }
+        .meeting-info input.empty-warning { border-color: #ff9800; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
         /* 演讲人分组 */
         .speaker-section { background: #f8f9fa; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
@@ -113,7 +115,7 @@
 
         /* 图片预览弹窗 */
         /* Toast 提示 */
-        .toast { visibility: hidden; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 8px; z-index: 3000; font-size: 14px; max-width: 80%; text-align: center; word-wrap: break-word; opacity: 0; transition: opacity 0.3s, visibility 0.3s; }
+        .toast { visibility: hidden; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 8px; z-index: 99999; font-size: 14px; max-width: 80%; text-align: center; word-wrap: break-word; opacity: 0; transition: opacity 0.3s, visibility 0.3s; }
         .toast.show { visibility: visible; opacity: 1; }
         .toast.success { background: #4caf50; }
         .toast.error { background: #f44336; }
@@ -245,7 +247,7 @@
                     </div>
                     <div class="setting-row">
                         <label>并发数量 (1-10)</label>
-                        <input type="number" id="concurrencyInput" min="1" max="10" value="3">
+                        <input type="number" id="concurrencyInput" min="1" max="10" value="5">
                     </div>
                     <div class="setting-row" id="adminSection" style="display:none; margin-top: 12px;">
                         <label>管理员密码（用于开启调试模式）</label>
@@ -381,7 +383,7 @@
         const API_URL = 'https://imgppt2txt-api.8611092.xyz/';
         const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
         const DEFAULT_MODEL = 'qwen3.5-plus';
-        const DEFAULT_DAILY_LIMIT = 100;
+        const DEFAULT_WEEKLY_LIMIT = 50;
 
         // 获取或生成设备ID
         function getDeviceId() {
@@ -452,13 +454,9 @@
             const isWechat = ua.indexOf('micromessenger') > -1;
             const isIPhone = /iphone|ipad|ipod/.test(ua);
 
-            // 如果在微信中且非iPhone，显示引导
+            // 如果在微信中且非iPhone，每次都显示引导
             if (isWechat && !isIPhone) {
-                // 检查是否已经显示过
-                if (!localStorage.getItem('wechat_guide_shown')) {
-                    document.getElementById('wechatGuideModal').classList.add('active');
-                    localStorage.setItem('wechat_guide_shown', 'true');
-                }
+                document.getElementById('wechatGuideModal').classList.add('active');
             }
         }
 
@@ -515,7 +513,7 @@
                 document.getElementById('apiKeyInput').value = settings.apiKey || '';
                 document.getElementById('baseUrlInput').value = settings.baseUrl || '';
                 document.getElementById('modelInput').value = settings.model || '';
-                document.getElementById('concurrencyInput').value = settings.concurrency || 3;
+                document.getElementById('concurrencyInput').value = settings.concurrency || 5;
                 document.getElementById('debugModeInput').checked = settings.debugMode || false;
             }
         }
@@ -524,11 +522,12 @@
             settings.apiKey = document.getElementById('apiKeyInput').value.trim();
             settings.baseUrl = document.getElementById('baseUrlInput').value.trim();
             settings.model = document.getElementById('modelInput').value.trim();
-            settings.concurrency = parseInt(document.getElementById('concurrencyInput').value) || 3;
+            settings.concurrency = parseInt(document.getElementById('concurrencyInput').value) || 5;
             settings.debugMode = document.getElementById('debugModeInput').checked;
 
             localStorage.setItem('ppt_settings', JSON.stringify(settings));
 
+            showToast('设置已保存', 'success');
             checkUsage();
         }
 
@@ -616,7 +615,7 @@
         function updateRemainingDisplay() {
             const info = settings.debugMode
                 ? '无限次'
-                : `免费: ${remaining}次`;
+                : `免费: ${remaining}张/周`;
             document.getElementById('headerRemaining').textContent = info;
         }
 
@@ -699,14 +698,14 @@
                         `).join('')}
                     </div>
                     ${speaker.images.length > 1 ? `
-                    <div style="display:flex;gap:8px;margin-top:4px;" ${speaker.collapsed ? 'style="display:none;"' : ''}>
+                    <div style="display:flex;gap:8px;margin-top:4px;${speaker.collapsed ? ';display:none' : ''}">
                         <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:4px 8px;"
                             onclick="sortImagesByTime(${sIdx})">按时间排序</button>
                         <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:4px 8px;"
                             onclick="sortImagesByName(${sIdx})">按文件名排序</button>
                     </div>
                     ` : ''}
-                    <div style="display:flex;gap:8px;margin-top:8px;" ${speaker.collapsed ? 'style="display:none;"' : ''}>
+                    <div style="display:flex;gap:8px;margin-top:8px;${speaker.collapsed ? ';display:none' : ''}">
                         <button class="btn btn-primary" style="flex:1;font-size:12px;padding:6px;"
                             onclick="uploadToSpeaker(${sIdx})">上传图片</button>
                         <button class="btn btn-secondary" style="font-size:11px;padding:6px 8px;"
@@ -1448,7 +1447,14 @@
 
         function updateProcessButton() {
             const totalImages = speakers.reduce((sum, s) => sum + s.images.length, 0);
-            const hasMeetingTheme = document.getElementById('meetingTheme').value.trim();
+            const meetingThemeInput = document.getElementById('meetingTheme');
+            const hasMeetingTheme = meetingThemeInput.value.trim();
+            // 会议主题为空时显示警告高亮
+            if (!hasMeetingTheme) {
+                meetingThemeInput.classList.add('empty-warning');
+            } else {
+                meetingThemeInput.classList.remove('empty-warning');
+            }
             // 只在处理中时禁用按钮，验证由点击后处理
             document.getElementById('processBtn').disabled = isProcessing;
         }
@@ -1504,7 +1510,7 @@
 
             const pdfImages = [];
             let processedCount = 0;
-            const concurrency = settings.concurrency || 3;
+            const concurrency = settings.concurrency || 5;
 
             try {
                 // 为每个演讲人生成独立的处理结果

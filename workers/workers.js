@@ -5,26 +5,101 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 // 默认值（env未设置时使用）
 var DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 var DEFAULT_MODEL = "qwen3.5-plus";
-// 每日免费限额，默认100次，可通过环境变量 DAILY_LIMIT 覆盖
-var DEFAULT_DAILY_LIMIT = 100;
-var usageStorage = /* @__PURE__ */ new Map();
-function checkAndIncrementUsage(deviceId, dailyLimit) {
-  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  if (!usageStorage.has(deviceId)) {
-    usageStorage.set(deviceId, { date: today, count: 0 });
+// 每周免费限额，默认50次，可通过环境变量 WEEKLY_LIMIT 覆盖
+var DEFAULT_WEEKLY_LIMIT = 50;
+
+// 获取本周周一日期
+function getWeekStartDate() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // 调整到周一
+  const monday = new Date(now.setDate(diff));
+  return monday.toISOString().split("T")[0];
+}
+
+// 使用 KV 存储免费次数
+async function checkAndIncrementUsage(env, deviceId, ip, weeklyLimit) {
+  const weekStart = getWeekStartDate();
+
+  // 分别获取 deviceId 和 IP 的使用次数
+  let deviceCount = 0;
+  let ipCount = 0;
+
+  if (deviceId && deviceId !== 'unknown') {
+    const deviceKey = `usage:${deviceId}:${weekStart}`;
+    const deviceDataStr = await env.imgppt2txt_USAGE_KV.get(deviceKey);
+    if (deviceDataStr) {
+      const deviceData = JSON.parse(deviceDataStr);
+      if (deviceData.date === weekStart) {
+        deviceCount = deviceData.count;
+      }
+    }
   }
-  const userData = usageStorage.get(deviceId);
-  if (userData.date !== today) {
-    userData.date = today;
-    userData.count = 0;
+
+  const ipKey = `usage:${ip}:${weekStart}`;
+  const ipDataStr = await env.imgppt2txt_USAGE_KV.get(ipKey);
+  if (ipDataStr) {
+    const ipData = JSON.parse(ipDataStr);
+    if (ipData.date === weekStart) {
+      ipCount = ipData.count;
+    }
   }
-  if (userData.count >= dailyLimit) {
+
+  // 取次数较少的作为当前使用次数（更宽松）
+  let totalCount = Math.min(deviceCount || Infinity, ipCount || Infinity);
+  if (totalCount === Infinity) {
+    // 两者都没有记录，按0计算
+    totalCount = 0;
+  }
+
+  // 检查是否超限
+  if (totalCount >= weeklyLimit) {
     return { allowed: false, remaining: 0 };
   }
-  userData.count++;
-  return { allowed: true, remaining: dailyLimit - userData.count };
+
+  // 计数+1 并保存
+  const newCount = totalCount + 1;
+  if (deviceId && deviceId !== 'unknown') {
+    const deviceKey = `usage:${deviceId}:${weekStart}`;
+    await env.imgppt2txt_USAGE_KV.put(deviceKey, JSON.stringify({ date: weekStart, count: newCount }), { expirationTtl: 86400 * 14 });
+  }
+  const ipKey2 = `usage:${ip}:${weekStart}`;
+  await env.imgppt2txt_USAGE_KV.put(ipKey2, JSON.stringify({ date: weekStart, count: newCount }), { expirationTtl: 86400 * 14 });
+
+  return { allowed: true, remaining: weeklyLimit - newCount };
 }
-__name(checkAndIncrementUsage, "checkAndIncrementUsage");
+
+// 获取当前使用次数（不增加）
+async function getUsageCount(env, deviceId, ip) {
+  const weekStart = getWeekStartDate();
+
+  // 分别获取 deviceId 和 IP 的使用次数
+  let deviceCount = 0;
+  let ipCount = 0;
+
+  if (deviceId && deviceId !== 'unknown') {
+    const deviceKey = `usage:${deviceId}:${weekStart}`;
+    const deviceDataStr = await env.imgppt2txt_USAGE_KV.get(deviceKey);
+    if (deviceDataStr) {
+      const deviceData = JSON.parse(deviceDataStr);
+      if (deviceData.date === weekStart) {
+        deviceCount = deviceData.count;
+      }
+    }
+  }
+
+  const ipKey = `usage:${ip}:${weekStart}`;
+  const ipDataStr = await env.imgppt2txt_USAGE_KV.get(ipKey);
+  if (ipDataStr) {
+    const ipData = JSON.parse(ipDataStr);
+    if (ipData.date === weekStart) {
+      ipCount = ipData.count;
+    }
+  }
+
+  // 取次数较少的作为当前使用次数
+  return Math.min(deviceCount || Infinity, ipCount || Infinity);
+}
 async function callAPI(baseUrl, model, apiKey, messages, maxTokens = 2e3) {
   const url = baseUrl + "/chat/completions";
   const payload = {
@@ -187,24 +262,26 @@ async function handleRequest(request, env) {
   const userModel = data.model || env.DEFAULT_MODEL || DEFAULT_MODEL;
   const useCustomApiKey = userApiKey.length > 0;
 
-  // 每日限额从环境变量读取
-  const dailyLimit = parseInt(env.DAILY_LIMIT) || DEFAULT_DAILY_LIMIT;
+  // 每周限额从环境变量读取
+  const weeklyLimit = parseInt(env.WEEKLY_LIMIT) || DEFAULT_WEEKLY_LIMIT;
 
   // 管理员密码验证
   const adminPassword = data.adminPassword || "";
   const envAdminPassword = env.ADMIN_PASSWORD;
   const isDebugMode = adminPassword && envAdminPassword && adminPassword === envAdminPassword;
-  // 优先使用前端传入的 deviceId，否则降级使用 IP
-  const deviceId = data.deviceId || request.headers.get("CF-Connecting-IP") || "unknown";
+  // 获取 IP
+  const clientIp = request.headers.get("CF-Connecting-IP") || "unknown";
+  // 优先使用前端传入的 deviceId
+  const deviceId = data.deviceId || "";
   let remaining = null;
   if (!useCustomApiKey && !isDebugMode) {
-    const result = checkAndIncrementUsage(deviceId, dailyLimit);
+    const result = await checkAndIncrementUsage(env, deviceId, clientIp, weeklyLimit);
     if (!result.allowed) {
       return makeResponse({
         success: false,
-        error: `今日次数已用完（${dailyLimit}次/天）`,
+        error: `本周免费次数已用完（${weeklyLimit}次/周）`,
         remaining: 0,
-        limit: dailyLimit
+        limit: weeklyLimit
       }, 403);
     }
     remaining = result.remaining;
@@ -226,13 +303,11 @@ async function handleRequest(request, env) {
   }
 
   if (action === "check_usage") {
-    const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const userData = usageStorage.get(deviceId);
-    const count = userData && userData.date === today ? userData.count : 0;
+    const count = await getUsageCount(env, deviceId, clientIp);
     return makeResponse({
       success: true,
-      remaining: isDebugMode ? 9999 : Math.max(0, dailyLimit - count),
-      limit: dailyLimit,
+      remaining: isDebugMode ? 9999 : Math.max(0, weeklyLimit - count),
+      limit: weeklyLimit,
       debugMode: isDebugMode
     });
   }
@@ -246,7 +321,7 @@ async function handleRequest(request, env) {
     const result = await processPptImage(imageBase64, pageNumber, apiKeyToUse, userBaseUrl, userModel);
     if (remaining !== null) {
       result.remaining = remaining;
-      result.limit = dailyLimit;
+      result.limit = weeklyLimit;
     }
     return makeResponse(result);
   }
@@ -264,7 +339,7 @@ async function handleRequest(request, env) {
     const result = await generateSummary(content, apiKeyToUse, userBaseUrl, userModel);
     if (remaining !== null) {
       result.remaining = remaining;
-      result.limit = dailyLimit;
+      result.limit = weeklyLimit;
     }
     return makeResponse(result);
   }

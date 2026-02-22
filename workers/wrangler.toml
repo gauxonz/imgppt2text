@@ -6,13 +6,18 @@ routes = [
   { pattern = "imgppt2txt-api.8611092.xyz", zone_name = "8611092.xyz" }
 ]
 
+# KV 命名空间（用于免费次数统计）
+[[kv_namespaces]]
+binding = "imgppt2txt_USAGE_KV"
+id = "30c3313855a14ecda29ad8cc791254d2"
+
 [vars]
 # 默认模型
 DEFAULT_MODEL = "qwen3.5-plus"
 # 默认API地址
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-# 每日免费限额（默认100次）
-DAILY_LIMIT = "100"
+# 每周免费限额（默认50次）
+WEEKLY_LIMIT = "50"
 
 # 注意：以下敏感信息需要通过 wrangler secret 设置：
 # wrangler secret put DEFAULT_API_KEY
