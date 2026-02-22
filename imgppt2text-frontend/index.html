@@ -338,6 +338,32 @@
         const DEFAULT_MODEL = 'qwen3.5-plus';
         const DEFAULT_DAILY_LIMIT = 100;
 
+        // 获取或生成设备ID
+        function getDeviceId() {
+            let deviceId = localStorage.getItem('device_id');
+            if (!deviceId) {
+                // 生成一个简单的设备指纹
+                const fingerprint = [
+                    navigator.userAgent,
+                    navigator.language,
+                    screen.width + 'x' + screen.height,
+                    new Date().getTimezoneOffset(),
+                    navigator.hardwareConcurrency || '',
+                    navigator.deviceMemory || ''
+                ].join('|');
+                // 简单哈希
+                let hash = 0;
+                for (let i = 0; i < fingerprint.length; i++) {
+                    const char = fingerprint.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                deviceId = 'dev_' + Math.abs(hash).toString(36);
+                localStorage.setItem('device_id', deviceId);
+            }
+            return deviceId;
+        }
+
         // 状态
         let speakers = [];
         let remaining = 0;
@@ -379,7 +405,8 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         action: 'verify_admin',
-                        adminPassword: password
+                        adminPassword: password,
+                        deviceId: getDeviceId()
                     })
                 });
                 const data = await res.json();
@@ -486,7 +513,8 @@
                         apiKey: settings.apiKey,
                         baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
                         model: settings.model || DEFAULT_MODEL,
-                        debugMode: settings.debugMode
+                        debugMode: settings.debugMode,
+                        deviceId: getDeviceId()
                     })
                 });
                 const data = await res.json();
@@ -1533,7 +1561,8 @@
                         theme: theme,
                         baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
                         model: settings.model || DEFAULT_MODEL,
-                        debugMode: settings.debugMode
+                        debugMode: settings.debugMode,
+                        deviceId: getDeviceId()
                     })
                 });
                 const result = await res.json();
@@ -1563,7 +1592,8 @@
                         apiKey: apiKey,
                         baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
                         model: settings.model || DEFAULT_MODEL,
-                        debugMode: settings.debugMode
+                        debugMode: settings.debugMode,
+                        deviceId: getDeviceId()
                     })
                 });
                 const result = await res.json();
@@ -1613,7 +1643,8 @@
                         apiKey: apiKey,
                         baseUrl: settings.baseUrl || DEFAULT_BASE_URL,
                         model: settings.model || DEFAULT_MODEL,
-                        debugMode: settings.debugMode
+                        debugMode: settings.debugMode,
+                        deviceId: getDeviceId()
                     })
                 });
                 return await res.json();

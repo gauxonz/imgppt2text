@@ -7,4 +7,13 @@ routes = [
 ]
 
 [vars]
+# 默认模型
 DEFAULT_MODEL = "qwen3.5-plus"
+# 默认API地址
+DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+# 每日免费限额（默认100次）
+DAILY_LIMIT = "100"
+
+# 注意：以下敏感信息需要通过 wrangler secret 设置：
+# wrangler secret put DEFAULT_API_KEY
+# wrangler secret put ADMIN_PASSWORD
