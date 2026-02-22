@@ -97,12 +97,20 @@ routes = [
 ├── imgppt2text-frontend/   # 前端页面
 │   ├── index.html          # 主页面
 │   ├── help.html           # 使用说明
-│   └── asset/             # 静态资源
+│   └── asset/             # 静态资源（含赞赏码）
 ├── workers/                # Cloudflare Workers
 │   ├── workers.js          # 后端代码
 │   └── wrangler.toml      # 部署配置
 └── CLAUDE.md              # 项目说明
 ```
+
+## 赞赏支持
+
+如果你觉得这个项目有用，欢迎赞赏支持！
+
+![赞赏码](./imgppt2text-frontend/asset/赞赏码.png)
+
+感谢你的支持！
 
 ## 开源协议
 
