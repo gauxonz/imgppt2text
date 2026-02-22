@@ -4,16 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>会拍总结</title>
+    <link rel="icon" type="image/png" href="./asset/logo.png">
+    <link rel="apple-touch-icon" href="./asset/logo.png">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 0; }
         .container { max-width: 900px; margin: 0 auto; background: white; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
-        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .header h1 { font-size: 20px; }
-        .header-remaining { font-size: 11px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px; }
-        .header-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .header-logo { width: 30px; height: 30px; border-radius: 6px; object-fit: contain; background: white; }
+        .header h1 { font-size: 18px; }
+        .header-remaining { font-size: 10px; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 10px; white-space: nowrap; }
+        .header-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap; }
         .header-btn:hover { background: rgba(255,255,255,0.3); }
+        @media (max-width: 420px) {
+            .header { padding: 8px 8px; gap: 6px; }
+            .header h1 { font-size: 15px; }
+            .header-logo { width: 24px; height: 24px; }
+            .header-remaining { font-size: 9px; padding: 3px 6px; }
+            .header-btn { padding: 5px 8px; font-size: 11px; }
+        }
         .content { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
 
         /* 设置侧边栏 */
@@ -57,6 +68,9 @@
         .drag-handle:active { cursor: grabbing; }
         .speaker-card h4 { color: #667eea; margin-bottom: 10px; font-size: 15px; }
         .speaker-card input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+        .speaker-card input::placeholder { font-size: 11px; color: #999; opacity: 1; }
+        .speaker-card input::-webkit-input-placeholder { font-size: 11px; color: #999; }
+        .speaker-card input::-moz-placeholder { font-size: 11px; color: #999; }
         .speaker-images { display: flex; flex-wrap: wrap; gap: 8px; min-height: 80px; padding: 4px; border: 1px dashed #ddd; border-radius: 8px; }
         .speaker-images.drag-over { border-color: #667eea; background: #f0f3ff; }
         .speaker-img { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; cursor: grab; transition: transform 0.2s, opacity 0.2s; flex-shrink: 0; }
@@ -176,10 +190,14 @@
     <div class="container">
         <div class="header">
             <div class="header-left">
+                <img src="./asset/logo.png" alt="logo" class="header-logo" onclick="handleLogoClick()">
                 <h1>会拍总结</h1>
                 <span class="header-remaining" id="headerRemaining">免费剩余: ...</span>
             </div>
-            <button class="header-btn" onclick="toggleSettings()">⚙️ 设置</button>
+            <div class="header-right">
+                <button class="header-btn" onclick="showHelp()">📖 说明</button>
+                <button class="header-btn" onclick="toggleSettings()">⚙️ 设置</button>
+            </div>
         </div>
 
         <!-- 设置遮罩层 -->
@@ -208,7 +226,7 @@
                     <label>并发数量 (1-10)</label>
                     <input type="number" id="concurrencyInput" min="1" max="10" value="3">
                 </div>
-                <div class="setting-row" style="margin-top: 12px;">
+                <div class="setting-row" id="adminSection" style="display:none; margin-top: 12px;">
                     <label>管理员密码（用于开启调试模式）</label>
                     <div style="display:flex;gap:8px;">
                         <input type="password" id="adminPasswordInput" placeholder="输入管理员密码" style="flex:1;">
@@ -376,6 +394,19 @@
             debugMode: false
         };
         let resultData = { markdown: '', pdfImages: [] };
+        // 隐蔽入口：连续点击logo 5次显示管理员设置
+        let logoClickCount = 0;
+        let logoClickTimer = null;
+        function handleLogoClick() {
+            logoClickCount++;
+            clearTimeout(logoClickTimer);
+            logoClickTimer = setTimeout(() => { logoClickCount = 0; }, 2000);
+            if (logoClickCount >= 5) {
+                logoClickCount = 0;
+                document.getElementById('adminSection').style.display = 'block';
+                showToast('管理员功能已显示', 'info');
+            }
+        }
 
         // 初始化
         window.onload = function() {
@@ -390,6 +421,11 @@
         function toggleSettings() {
             document.getElementById('settingsPanel').classList.toggle('active');
             document.getElementById('settingsOverlay').classList.toggle('active');
+        }
+
+        // 使用说明
+        function showHelp() {
+            window.location.href = 'help.html';
         }
 
         // 管理员验证

@@ -1,47 +1,32 @@
-# PPT图片转文字 - Web版本
+# 会拍总结 - 前端
 
-使用 Cloudflare Workers + HTML 前端实现的 PPT 图片转文字工具。
+“会场咔咔拍，一键转文字！” —— 现场 PPT 照片转换为文字总结的工具。
 
-## 技术架构
+## 部署
 
-- **前端**: 纯 HTML/CSS/JavaScript
-- **后端**: Cloudflare Workers (Python)
-- **AI服务**: 阿里百炼 DashScope (qwen3.5-plus 模型)
+### 方式一：Cloudflare Pages
 
-## 快速部署
+1. 进入 Cloudflare Dashboard → Pages
+2. 创建新项目，绑定本仓库
+3. 构建命令留空，输出目录填 `.`
+4. 绑定自定义域名（可选）
 
-### 1. 创建 Workers
+### 方式二：其他静态托管
 
-```bash
-# 安装 wrangler
-npm install -g wrangler
+将 `index.html`、`help.html` 和 `asset` 文件夹上传到任何静态托管服务即可。
 
-# 登录 Cloudflare
-wrangler login
+## 前端配置
 
-# 创建新项目
-wrangler init ppt-processor --type=python
+如需修改后端 API 地址，编辑 `index.html` 中的 `API_URL` 常量：
+
+```javascript
+const API_URL = 'https://your-api-domain.com/';
 ```
 
-### 2. 配置 Workers
+## 文件说明
 
-将 `workers/py` 目录下的代码复制到 Workers 中，或使用 `wrangler deploy`。
-
-### 3. 设置环境变量
-
-```bash
-wrangler secret put DASHSCOPE_API_KEY
-# 输入你的阿里百炼 API Key
-```
-
-### 4. 前端部署
-
-将 `workers/html` 目录下的文件部署到 Cloudflare Pages 或任何静态托管。
-
-## 功能
-
-- [x] 上传多张 PPT 照片
-- [x] AI 识别图片中的文字
-- [x] 生成整体总结
-- [x] 支持自定义 API Key
-- [x] 复制结果到剪贴板
+| 文件 | 说明 |
+|------|------|
+| index.html | 主页面 |
+| help.html | 使用说明 |
+| asset/logo.png | Logo 图片 |
