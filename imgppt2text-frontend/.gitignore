@@ -36,4 +36,5 @@ Thumbs.db
 !.env.example
 
 # 本地配置文件
+wrangler.toml
 !wrangler.toml.example
