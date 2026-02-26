@@ -106,7 +106,7 @@ wrangler pages deploy .
 
 | 变量名 | 说明 | 示例值 |
 |--------|------|--------|
-| API_URL | 后端 Workers 地址（**唯一需要配置**） | `https://imgppt2txt-api.8611092.xyz/` |
+| API_URL | 后端 Workers 地址（**唯一需要配置**） | `https://your-workers.workers.dev/` |
 
 前端会自动从 Worker 获取其他配置（DEFAULT_BASE_URL、DEFAULT_MODEL、WEEKLY_LIMIT）。
 
