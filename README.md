@@ -59,10 +59,15 @@ wrangler secret put ADMIN_PASSWORD
 
 ### 3. 前端部署 (Cloudflare Pages)
 
-1. 进入 Cloudflare Dashboard → Pages
-2. 创建新项目，连接 Git 仓库
-3. 构建命令留空，输出目录填 `.`
-4. **重要：添加环境变量**
+有两种方式部署前端：
+
+#### 方式一：连接 GitHub 仓库（推荐）
+
+1. 将 `imgppt2text-frontend` 文件夹作为独立仓库推送到 GitHub
+2. 进入 Cloudflare Dashboard → Pages
+3. 创建新项目，连接该 GitHub 仓库
+4. 构建命令留空，输出目录填 `.`
+5. **重要：添加环境变量**
 
 在 Pages 项目设置中添加以下环境变量：
 
@@ -73,7 +78,25 @@ wrangler secret put ADMIN_PASSWORD
 | DEFAULT_MODEL | 使用的模型 | `qwen3.5-plus` |
 | DEFAULT_WEEKLY_LIMIT | 每周免费次数 | `50` |
 
-5. 部署完成，访问你的 Pages 域名
+6. 部署完成，访问你的 Pages 域名
+
+#### 方式二：使用 Wrangler CLI
+
+```bash
+cd imgppt2text-frontend
+
+# 登录 Cloudflare
+wrangler login
+
+# 创建 Pages 项目（如需要）
+wrangler pages project create imgppt2text-frontend
+
+# 设置环境变量并部署
+wrangler pages deploy . --project-name=imgppt2text-frontend
+# 在 Cloudflare Dashboard 中为项目添加环境变量（见方式一）
+```
+
+**注意**：无论使用哪种方式，都需要在 Cloudflare Dashboard 的 Pages 项目设置中添加环境变量。
 
 ### 4. 配置自定义域名（可选）
 

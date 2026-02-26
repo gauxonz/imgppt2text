@@ -35,10 +35,15 @@ wrangler deploy
 
 ### 2. 部署前端 (Cloudflare Pages)
 
-1. 进入 Cloudflare Dashboard → Pages
-2. 创建新项目，连接 Git 仓库
-3. 构建命令留空，输出目录填 `.`
-4. **添加环境变量**（非常重要！）：
+有两种方式：
+
+#### 方式一：连接 GitHub 仓库（推荐）
+
+1. 将此文件夹作为独立仓库推送到 GitHub
+2. 进入 Cloudflare Dashboard → Pages
+3. 创建新项目，连接该 GitHub 仓库
+4. 构建命令留空，输出目录填 `.`
+5. **添加环境变量**（非常重要！）：
 
 | 变量名 | 值 | 说明 |
 |--------|-----|------|
@@ -47,7 +52,22 @@ wrangler deploy
 | DEFAULT_MODEL | `qwen3.5-plus` | 使用的模型 |
 | DEFAULT_WEEKLY_LIMIT | `50` | 每周免费次数 |
 
-5. 部署完成！
+6. 部署完成！
+
+#### 方式二：使用 Wrangler CLI
+
+```bash
+# 登录 Cloudflare
+wrangler login
+
+# 创建 Pages 项目
+wrangler pages project create imgppt2text-frontend
+
+# 部署
+wrangler pages deploy . --project-name=imgppt2text-frontend
+```
+
+然后在 Cloudflare Dashboard 的 Pages 项目设置中添加同样的环境变量。
 
 ## 环境变量说明
 
