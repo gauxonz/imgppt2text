@@ -364,6 +364,16 @@ async function handleRequest(request, env) {
     return makeResponse(responseData);
   }
 
+  // 获取服务器配置
+  if (action === "get_config") {
+    return makeResponse({
+      success: true,
+      baseUrl: env.DEFAULT_BASE_URL || DEFAULT_BASE_URL,
+      model: env.DEFAULT_MODEL || DEFAULT_MODEL,
+      weeklyLimit: weeklyLimit
+    });
+  }
+
   if (action === "process") {
     const imageBase64 = data.image || "";
     const pageNumber = data.pageNumber || 1;

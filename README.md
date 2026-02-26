@@ -21,66 +21,50 @@
 - [x] 每周免费次数限制（默认50次/周）
 - [x] 调试模式（管理员专用）
 
-## 快速部署
+## 部署步骤
 
-### 1. 后端部署 (Cloudflare Workers)
+### 1. 创建 KV 命名空间
+
+在部署 Workers 之前，需要先创建 KV 命名空间用于存储免费次数：
+
+1. 进入 [Cloudflare Dashboard](https://dash.cloudflare.com) → Workers 和 Pages → KV
+2. 点击「创建命名空间」
+3. 输入名称，例如：`imgppt2txt_usage`
+4. 创建成功后，复制「ID」
+
+### 2. 部署后端 (Cloudflare Workers)
 
 ```bash
 cd workers
 
-# 安装依赖
+# 安装 Wrangler CLI
 npm install -g wrangler
 
 # 登录 Cloudflare
 wrangler login
 
-# 复制配置示例文件
+# 复制配置示例
 cp wrangler.toml.example wrangler.toml
 
-# 编辑 wrangler.toml，配置你的：
-# - 自定义域名 (routes)
-# - KV 命名空间 ID
+# 编辑 wrangler.toml，配置：
+# - name: 项目名称
+# - routes: 自定义域名
+# - kv_namespaces.id: 填入上一步创建的 KV 命名空间 ID
+
+# 设置敏感环境变量
+wrangler secret put DEFAULT_API_KEY
+# 输入你的阿里百炼 API Key（格式：sk-xxx）
+
+wrangler secret put ADMIN_PASSWORD
+# 输入管理员密码（可选，用于开启调试模式）
 
 # 部署
 wrangler deploy
 ```
 
-### 2. 配置敏感环境变量
+### 3. 部署前端 (Cloudflare Pages)
 
-```bash
-# 阿里百炼 API Key（必须）
-wrangler secret put DEFAULT_API_KEY
-# 输入你的 API Key（格式：sk-xxx）
-
-# 管理员密码（可选，用于开启调试模式）
-wrangler secret put ADMIN_PASSWORD
-# 输入管理员密码
-```
-
-### 3. 前端部署 (Cloudflare Pages)
-
-有两种方式部署前端：
-
-#### 方式一：连接 GitHub 仓库（推荐）
-
-1. 将 `imgppt2text-frontend` 文件夹作为独立仓库推送到 GitHub
-2. 进入 Cloudflare Dashboard → Pages
-3. 创建新项目，连接该 GitHub 仓库
-4. 构建命令留空，输出目录填 `.`
-5. **重要：添加环境变量**
-
-在 Pages 项目设置中添加以下环境变量：
-
-| 变量名 | 说明 | 示例值 |
-|--------|------|--------|
-| API_URL | 后端 Workers 地址 | `https://your-workers.workers.dev/` |
-| DEFAULT_BASE_URL | 阿里百炼 API 地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| DEFAULT_MODEL | 使用的模型 | `qwen3.5-plus` |
-| DEFAULT_WEEKLY_LIMIT | 每周免费次数 | `50` |
-
-6. 部署完成，访问你的 Pages 域名
-
-#### 方式二：使用 Wrangler CLI
+前端只需要配置一个环境变量：`API_URL`（指向你的 Workers 地址）
 
 ```bash
 cd imgppt2text-frontend
@@ -88,51 +72,43 @@ cd imgppt2text-frontend
 # 登录 Cloudflare
 wrangler login
 
-# 创建 Pages 项目（如需要）
-wrangler pages project create imgppt2text-frontend
+# 复制配置示例
+cp wrangler.toml.example wrangler.toml
 
-# 设置环境变量并部署
-wrangler pages deploy . --project-name=imgppt2text-frontend
-# 在 Cloudflare Dashboard 中为项目添加环境变量（见方式一）
+# 编辑 wrangler.toml，将 API_URL 改为你的 Workers 地址
+
+# 创建 Pages 项目
+wrangler pages project create imgppt2txt
+
+# 部署
+wrangler pages deploy .
 ```
 
-**注意**：无论使用哪种方式，都需要在 Cloudflare Dashboard 的 Pages 项目设置中添加环境变量。
+### 4. 绑定自定义域名（可选）
 
-### 4. 配置自定义域名（可选）
-
-Workers 部署后，在 Cloudflare Dashboard 中添加自定义域名即可。
+部署完成后，可在 Cloudflare Dashboard 中绑定自定义域名：
+- Workers: 进入 Workers → 你的项目 → 触发器 → 自定义域
+- Pages: 进入 Pages → 你的项目 → 自定义域
 
 ## 配置说明
 
 ### Workers 环境变量
 
-通过 `wrangler secret` 设置（敏感信息）：
-
-| 变量名 | 说明 |
-|--------|------|
-| DEFAULT_API_KEY | 阿里百炼 API Key（必须） |
-| ADMIN_PASSWORD | 管理员密码 |
-
-通过 `wrangler.toml` 或 Dashboard 设置：
-
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| DEFAULT_BASE_URL | API 地址 | https://dashscope.aliyuncs.com/compatible-mode/v1 |
-| DEFAULT_MODEL | 默认模型 | qwen3.5-plus |
-| WEEKLY_LIMIT | 每周免费次数 | 50 |
+| 变量名 | 设置方式 | 说明 | 默认值 |
+|--------|----------|------|--------|
+| DEFAULT_API_KEY | `wrangler secret put` | 阿里百炼 API Key（必须） | - |
+| ADMIN_PASSWORD | `wrangler secret put` | 管理员密码 | - |
+| WEEKLY_LIMIT | wrangler.toml | 每周免费次数 | 50 |
+| DEFAULT_MODEL | wrangler.toml | 默认模型 | qwen3.5-plus |
+| DEFAULT_BASE_URL | wrangler.toml | API 地址 | https://dashscope.aliyuncs.com/compatible-mode/v1 |
 
 ### 前端环境变量
 
-在 Cloudflare Pages 项目设置中配置：
-
 | 变量名 | 说明 | 示例值 |
 |--------|------|--------|
-| API_URL | 后端 Workers 地址 | `https://your-workers.workers.dev/` |
-| DEFAULT_BASE_URL | 阿里百炼 API 地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| DEFAULT_MODEL | 使用的模型 | `qwen3.5-plus` |
-| DEFAULT_WEEKLY_LIMIT | 每周免费次数 | `50` |
+| API_URL | 后端 Workers 地址（**唯一需要配置**） | `https://imgppt2txt-api.8611092.xyz/` |
 
-前端通过 Cloudflare Pages Functions 动态注入配置，详见 `functions/[[path]].js`。
+前端会自动从 Worker 获取其他配置（DEFAULT_BASE_URL、DEFAULT_MODEL、WEEKLY_LIMIT）。
 
 ## 项目结构
 
@@ -141,14 +117,14 @@ Workers 部署后，在 Cloudflare Dashboard 中添加自定义域名即可。
 │   ├── index.html          # 主页面
 │   ├── help.html           # 使用说明
 │   ├── functions/          # Pages Functions（环境变量注入）
+│   ├── wrangler.toml       # 部署配置（本地使用，不提交）
 │   ├── wrangler.toml.example  # 配置示例
-│   ├── .env.example        # 环境变量示例
-│   └── asset/             # 静态资源
+│   └── asset/              # 静态资源
 ├── workers/                # Cloudflare Workers
 │   ├── workers.js          # 后端代码
-│   ├── wrangler.toml.example  # 配置示例
-│   └── wrangler.toml       # 部署配置（本地使用，不提交）
-└── README.md              # 项目说明
+│   ├── wrangler.toml       # 部署配置（本地使用，不提交）
+│   └── wrangler.toml.example  # 配置示例
+└── README.md               # 项目说明
 ```
 
 ## 本地开发
@@ -165,8 +141,6 @@ wrangler dev
 ### 前端
 
 前端使用 Cloudflare Pages Functions，需要部署后才能测试完整功能。
-
-也可以直接修改 `index.html` 中的默认配置进行本地测试。
 
 ## 使用方法
 

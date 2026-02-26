@@ -386,9 +386,29 @@
 
         // 配置（由 Cloudflare Pages Functions 注入）
         const API_URL = '__API_URL__';
-        const DEFAULT_BASE_URL = '__DEFAULT_BASE_URL__';
-        const DEFAULT_MODEL = '__DEFAULT_MODEL__';
-        const DEFAULT_WEEKLY_LIMIT = parseInt('__DEFAULT_WEEKLY_LIMIT__') || 50;
+        // 以下配置从 Worker 获取
+        let DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        let DEFAULT_MODEL = 'qwen3.5-plus';
+        let DEFAULT_WEEKLY_LIMIT = 50;
+
+        // 从 Worker 获取配置
+        async function fetchConfig() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_config' })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    DEFAULT_BASE_URL = data.baseUrl;
+                    DEFAULT_MODEL = data.model;
+                    DEFAULT_WEEKLY_LIMIT = data.weeklyLimit;
+                }
+            } catch (e) {
+                console.error('获取配置失败:', e);
+            }
+        }
 
         // 获取或生成设备ID
         function getDeviceId() {
@@ -444,7 +464,9 @@
         }
 
         // 初始化
-        window.onload = function() {
+        window.onload = async function() {
+            // 先获取配置
+            await fetchConfig();
             loadSettings();
             checkUsage();
             updateProcessButton();
