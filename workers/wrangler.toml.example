@@ -1,0 +1,26 @@
+name = "imgppt2txt-api"
+compatibility_date = "2024-01-01"
+main = "workers.js"
+
+# 替换为你的自定义域名
+routes = [
+  { pattern = "your-domain.workers.dev", zone_name = "your-zone-id" }
+]
+
+# KV 命名空间（用于免费次数统计）
+# 先在 Cloudflare Dashboard 创建 KV 命名空间，然后绑定
+# [[kv_namespaces]]
+# binding = "imgppt2txt_USAGE_KV"
+# id = "your-kv-namespace-id"
+
+[vars]
+# 默认模型
+DEFAULT_MODEL = "qwen3.5-plus"
+# 默认API地址
+DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+# 每周免费限额
+WEEKLY_LIMIT = "50"
+
+# 注意：以下敏感信息需要通过 wrangler secret 设置（不能放在配置文件中）：
+# wrangler secret put DEFAULT_API_KEY
+# wrangler secret put ADMIN_PASSWORD

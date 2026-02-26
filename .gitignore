@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Cloudflare
+.wrangler/
+node_modules/
+*.local
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (敏感信息不提交)
+.env
+.env.local
+.env.*.local
+
+# 临时文件
+*.tmp
+*.bak
+
+# 子模块git（不跟踪前端子仓库）
+imgppt2text-frontend/.git
+workers/.git
+
+# 配置文件（包含敏感信息）
+*.local.toml
+.env
+.env.*
+!.env.example
+workers/wrangler.toml
+!workers/wrangler.toml.example
